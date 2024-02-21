@@ -14,7 +14,7 @@ def _get_available_modules():
   modules = []
   for fname in os.listdir(os.path.dirname(__file__)):
     # To add a new API implement $API + '_api.py' module within this folder.
-    m = re.match(r'(.*)_api\.py$', fname)
+    m = re.match(r'(.*_api)\.py$', fname)
     if m:
       modules.append(m.group(1))
 
@@ -30,7 +30,7 @@ def _detect_apis():
 
   apis = collections.OrderedDict()
   for mod_name in _get_available_modules():
-    mod = importlib.import_module(f'{parent}.{mod_name}_api')
+    mod = importlib.import_module(f'{parent}.{mod_name}')
     if mod.API_NAME is not None:
       apis[mod.API_NAME] = mod
 
