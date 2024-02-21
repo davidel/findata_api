@@ -83,8 +83,7 @@ def _data_issue_request(**kwargs):
                      'volume': 'v',
                      _TIME_COLUMN: 't'}, inplace=True)
 
-  times = pd.to_datetime(df['t'])
-  df['t'] = (times - datetime.datetime(1970, 1, 1)).dt.total_seconds().astype(np.int64)
+  df['t'] = pyp.datetime_to_epoch(df['t'])
 
   alog.debug0(f'Fetched {len(df)} rows from MARKETSTACK for {kwargs.get("symbols").split(",")}')
 
