@@ -107,10 +107,10 @@ class API(api_base.API):
   def _get_intraday_data(self, symbols, start_date, end_date, data_step='5Min'):
     dfs, offset = [], 0
     while True:
-      alog.debug0(f'Fetching data for {symbols.split(",")} with {data_step} interval from {start_date} to {end_date}')
+      alog.debug0(f'Fetching data for {symbols} with {data_step} interval from {start_date} to {end_date}')
 
       with self._api_throttle.trigger():
-        df, rdata = _data_issue_request(symbols,
+        df, rdata = _data_issue_request(symbols=','.join(symbols),
                                         api_key=self._api_key,
                                         interval=_map_data_step(data_step),
                                         date_from=start_date.isoformat(),
