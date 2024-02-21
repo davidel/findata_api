@@ -153,6 +153,10 @@ def get_df_columns_symbols(df):
   return sorted(split_columns(df.columns.tolist()).keys())
 
 
+def get_df_column_unique(df, name):
+  return sorted(df[name].unique().tolist())
+
+
 def get_data_step_delta(data_step):
   if isinstance(data_step, datetime.timedelta):
     return data_step
