@@ -136,7 +136,7 @@ class API(api_base.API):
                                                limit=limit,
                                                tz=pyd.us_eastern_timezone())
 
-    dfs = self._get_intraday_data(symbols, range_start, range_end,
+    dfs = self._get_intraday_data(symbols, start_date, end_date,
                                   data_step=data_step)
 
     if dfs:
