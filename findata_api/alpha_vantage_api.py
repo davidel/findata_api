@@ -32,13 +32,7 @@ _TIME_COLUMNS = {'time', 'timestamp'}
 _RESP_COLUMNS = {'open', 'high', 'low', 'close', 'volume'}
 
 
-def _get_resp_columns(text):
-  pos = text.find('\n')
-
-  return text[: pos].split(',') if pos > 0 else []
-
-
-def _request_alphavantage(func, **kwargs):
+def _issue_request(func, **kwargs):
   timeout = kwargs.pop('timeout', pyu.env('ALPHA_VANTAGE_TIMEOUT', 90))
   api_key = kwargs.pop('api_key', None)
   params = dict(apikey=api_key, function=func, datatype='csv')
@@ -48,7 +42,7 @@ def _request_alphavantage(func, **kwargs):
 
   tas.check_eq(resp.status_code, 200, msg=f'Request error {resp.status_code}:\n{resp.text}')
 
-  cols = _get_resp_columns(resp.text)
+  cols = ut.csv_parse_columns(resp.text)
   scols = set(cols)
 
   tas.check(all(c in scols for c in _RESP_COLUMNS),
@@ -68,11 +62,11 @@ def _parse_datetime(s):
   return np.datetime64(dateutil.parser.parse(f'{s} -0400'), 'ms')
 
 
-def _data_request_alphavantage(func, **kwargs):
+def _data_issue_request(func, **kwargs):
   dtype = kwargs.pop('dtype', np.float32)
   symbol = kwargs.get('symbol', None)
 
-  data, cols, time_col = _request_alphavantage(func, **kwargs)
+  data, cols, time_col = _issue_request(func, **kwargs)
 
   types = {c: dtype for c in _RESP_COLUMNS}
 
@@ -130,12 +124,12 @@ class API(api_base.API):
       alog.debug0(f'Fetching data for {symbol} with {data_step} interval for month {month or "LATEST"}')
 
       with self._api_throttle.trigger():
-        df = _data_request_alphavantage('TIME_SERIES_INTRADAY',
-                                        api_key=self._api_key,
-                                        symbol=symbol,
-                                        interval=data_step.lower(),
-                                        month=month,
-                                        outputsize='full')
+        df = _data_issue_request('TIME_SERIES_INTRADAY',
+                                 api_key=self._api_key,
+                                 symbol=symbol,
+                                 interval=data_step.lower(),
+                                 month=month,
+                                 outputsize='full')
       dfs.append(df)
 
     return dfs

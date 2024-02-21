@@ -535,3 +535,9 @@ def save_reshaped_data(df, path, merge=False, dtype=np.float32):
 
   return df
 
+
+def csv_parse_columns(text):
+  pos = text.find('\n')
+
+  return text[: pos].split(',') if pos > 0 else []
+
