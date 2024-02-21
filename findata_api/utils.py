@@ -119,6 +119,7 @@ def split_field(f):
   # be taken care when splitting the symbol and field names.
   xpos = f.find('__')
   pos = f.rfind('.', 0, xpos if xpos > 0 else len(f))
+
   return (f[: pos], f[pos + 1:]) if pos >= 0 else (None, f)
 
 
