@@ -13,7 +13,7 @@ from py_misc_utils import utils as pyu
 # within this folder.
 # In order of preference in case not user specified with --api.
 _AVAILABLE_APIS = (
-  'finhub',
+  'finnhub',
   'yfinance',
   'polygon',
   'alpha_vantage',
