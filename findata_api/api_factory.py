@@ -14,21 +14,20 @@ from . import py_api
 from . import yf_api
 
 
-_APIS = collections.OrderedDict()
+def _detect_apis():
+  apis = collections.OrderedDict()
+  # In order of preference in case not user specified with --api.
+  for aid in ('fh', 'yf', 'py', 'av', 'ap'):
+    mod = getattr(globals(), f'{aid}_api', None)
+    if mod is not None:
+      name = getattr(mod, 'API_NAME')
+      if name is not None:
+        apis[name] = mod
 
-# In order of preference in case not user specified with --api.
-if fh_api.API_NAME is not None:
-  _APIS[fh_api.API_NAME] = fh_api
-if yf_api.API_NAME is not None:
-  _APIS[yf_api.API_NAME] = yf_api
-if py_api.API_NAME is not None:
-  _APIS[py_api.API_NAME] = py_api
-if av_api.API_NAME is not None:
-  _APIS[av_api.API_NAME] = av_api
-if ap_api.API_NAME is not None:
-  _APIS[ap_api.API_NAME] = ap_api
+  return apis
 
 
+_APIS = _detect_apis()
 _ARGS = None
 
 def setup_api(args):
