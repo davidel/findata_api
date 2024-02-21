@@ -2,6 +2,7 @@ import argparse
 import collections
 import importlib
 import os
+import re
 import threading
 
 from py_misc_utils import alog
@@ -9,23 +10,27 @@ from py_misc_utils import cleanups
 from py_misc_utils import utils as pyu
 
 
-# To add a new API add its name here and implement $API + '_api.py' module
-# within this folder.
-# In order of preference in case not user specified with --api.
-_AVAILABLE_APIS = (
-  'finnhub',
-  'yfinance',
-  'polygon',
-  'alpha_vantage',
-  'alpaca',
-)
+def _get_available_modules():
+  modules = []
+  for fname in os.listdir(os.path.dirname(__file__)):
+    # To add a new API implement $API + '_api.py' module within this folder.
+    m = re.match(r'(.*)_api.py$', fname)
+    if m:
+      modules.append(m.group(1))
+
+  order = {name: len(modules) - i for i, name in os.getenv(
+    'FINDATA_API_ORDER',
+    'finnhub,yfinance,polygon,alpha_vantage,alpaca').split(',')}
+
+  return sorted(modules, key=lambda x: order.get(x, -1), reverse=True)
+
 
 def _detect_apis():
   parent, _ = pyu.split_module_name(__name__)
 
   apis = collections.OrderedDict()
-  for aid in _AVAILABLE_APIS:
-    mod = importlib.import_module(f'{parent}.{aid}_api')
+  for mod_name in _get_available_modules():
+    mod = importlib.import_module(f'{parent}.{mod_name}_api')
     if mod.API_NAME is not None:
       apis[mod.API_NAME] = mod
 
