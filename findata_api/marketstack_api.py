@@ -81,7 +81,7 @@ def _data_issue_request(**kwargs):
                      'low': 'l',
                      'high': 'h',
                      'volume': 'v',
-                     'date': 't'}, inplace=True)
+                     _TIME_COLUMN: 't'}, inplace=True)
 
   times = pd.to_datetime(df['t'])
   df['t'] = (times - datetime.datetime(1970, 1, 1)).dt.total_seconds().astype(np.int64)
