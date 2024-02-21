@@ -88,7 +88,7 @@ def _data_issue_request(**kwargs):
 
   alog.debug0(f'Fetched {len(df)} rows from MARKETSTACK for {kwargs.get("symbols").split(",")}')
 
-  return df, rdata
+  return df, pyu.make_object(**rdata['pagination'])
 
 
 class API(api_base.API):
@@ -110,20 +110,19 @@ class API(api_base.API):
       alog.debug0(f'Fetching data for {symbols} with {data_step} interval from {start_date} to {end_date}')
 
       with self._api_throttle.trigger():
-        df, rdata = _data_issue_request(symbols=','.join(symbols),
-                                        api_key=self._api_key,
-                                        interval=_map_data_step(data_step),
-                                        date_from=start_date.isoformat(),
-                                        date_to=end_date.isoformat(),
-                                        offset=offset)
+        df, pagn = _data_issue_request(symbols=','.join(symbols),
+                                       api_key=self._api_key,
+                                       interval=_map_data_step(data_step),
+                                       date_from=start_date.isoformat(),
+                                       date_to=end_date.isoformat(),
+                                       offset=offset)
 
       if not df.empty:
         dfs.append(df)
 
-      pag = rdata['pagination']
-      tas.check_eq(pag['count'], len(df))
-      offset += pag['count']
-      if offset >= pag['total']:
+      tas.check_eq(pagn.count, len(df))
+      offset += pagn.count
+      if offset >= pagn.total:
         break
 
     return dfs
