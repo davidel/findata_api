@@ -1,5 +1,6 @@
 import argparse
 import collections
+import importlib
 import os
 import threading
 
@@ -7,18 +8,12 @@ from py_misc_utils import alog
 from py_misc_utils import cleanups
 from py_misc_utils import utils as pyu
 
-from . import ap_api
-from . import av_api
-from . import fh_api
-from . import py_api
-from . import yf_api
-
 
 def _detect_apis():
   apis = collections.OrderedDict()
   # In order of preference in case not user specified with --api.
-  for aid in ('fh', 'yf', 'py', 'av', 'ap'):
-    mod = globals()[f'{aid}_api']
+  for aid in ('finhub', 'yfinance', 'polygon', 'alpha_vantage', 'alpaca'):
+    mod = importlib.import_module(f'{aid}_api')
     if mod.API_NAME is not None:
       apis[mod.API_NAME] = mod
 
