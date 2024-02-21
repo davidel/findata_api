@@ -18,7 +18,7 @@ def _detect_apis():
   apis = collections.OrderedDict()
   # In order of preference in case not user specified with --api.
   for aid in ('fh', 'yf', 'py', 'av', 'ap'):
-    mod = getattr(globals(), f'{aid}_api', None)
+    mod = globals().get(f'{aid}_api', None)
     if mod is not None:
       name = getattr(mod, 'API_NAME')
       if name is not None:
