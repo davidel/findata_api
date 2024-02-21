@@ -13,7 +13,7 @@ def _detect_apis():
   apis = collections.OrderedDict()
   # In order of preference in case not user specified with --api.
   for aid in ('finhub', 'yfinance', 'polygon', 'alpha_vantage', 'alpaca'):
-    mod = importlib.import_module(f'{aid}_api')
+    mod = importlib.import_module(f'findata_api.{aid}_api')
     if mod.API_NAME is not None:
       apis[mod.API_NAME] = mod
 
