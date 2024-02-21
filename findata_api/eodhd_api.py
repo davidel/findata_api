@@ -1,5 +1,4 @@
 import datetime
-import dateutil
 import io
 import os
 import requests
@@ -41,11 +40,13 @@ _DATA_STEPS = {
 
 
 def _map_data_step(data_step):
-  return _DATA_STEPS.get(data_step.lower(), data_step)
+  lowds = data_step.lower()
+
+  return _DATA_STEPS.get(lowds, lowds)
 
 
 def _issue_request(symbol, **kwargs):
-  timeout = kwargs.pop('timeout', pyu.env('ALPHA_VANTAGE_TIMEOUT', 90))
+  timeout = kwargs.pop('timeout', pyu.env('FINDATA_TIMEOUT', 90))
   api_key = kwargs.pop('api_key', None)
   params = dict(api_token=api_key, fmt='csv')
   params.update(kwargs)

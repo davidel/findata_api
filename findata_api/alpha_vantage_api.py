@@ -33,7 +33,7 @@ _RESP_COLUMNS = {'open', 'high', 'low', 'close', 'volume'}
 
 
 def _issue_request(func, **kwargs):
-  timeout = kwargs.pop('timeout', pyu.env('ALPHA_VANTAGE_TIMEOUT', 90))
+  timeout = kwargs.pop('timeout', pyu.env('FINDATA_TIMEOUT', 90))
   api_key = kwargs.pop('api_key', None)
   params = dict(apikey=api_key, function=func, datatype='csv')
   params.update(kwargs)
