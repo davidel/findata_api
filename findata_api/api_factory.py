@@ -9,12 +9,22 @@ from py_misc_utils import cleanups
 from py_misc_utils import utils as pyu
 
 
+# To add a new API add its name here and implement $API + '_api.py' module
+# within this folder.
+# In order of preference in case not user specified with --api.
+_AVAILABLE_APIS = (
+  'finhub',
+  'yfinance',
+  'polygon',
+  'alpha_vantage',
+  'alpaca',
+)
+
 def _detect_apis():
   parent, _ = pyu.split_module_name(__name__)
 
-  # In order of preference in case not user specified with --api.
   apis = collections.OrderedDict()
-  for aid in ('finhub', 'yfinance', 'polygon', 'alpha_vantage', 'alpaca'):
+  for aid in _AVAILABLE_APIS:
     mod = importlib.import_module(f'{parent}.{aid}_api')
     if mod.API_NAME is not None:
       apis[mod.API_NAME] = mod
