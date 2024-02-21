@@ -18,9 +18,9 @@ def _get_available_modules():
     if m:
       modules.append(m.group(1))
 
-  order = {name: len(modules) - i for i, name in os.getenv(
+  order = {name: len(modules) - i for i, name in enumerate(os.getenv(
     'FINDATA_API_ORDER',
-    'finnhub,yfinance,polygon,alpha_vantage,alpaca').split(',')}
+    'finnhub,yfinance,polygon,alpha_vantage,alpaca').split(','))}
 
   return sorted(modules, key=lambda x: order.get(x, -1), reverse=True)
 
