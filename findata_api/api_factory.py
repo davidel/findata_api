@@ -14,7 +14,7 @@ def _get_available_modules():
   modules = []
   for fname in os.listdir(os.path.dirname(__file__)):
     # To add a new API implement $API + '_api.py' module within this folder.
-    m = re.match(r'(.*)_api.py$', fname)
+    m = re.match(r'(.*)_api\.py$', fname)
     if m:
       modules.append(m.group(1))
 
