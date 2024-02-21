@@ -42,7 +42,7 @@ def _map_data_step(data_step):
   return _DATA_STEPS.get(lowds, lowds)
 
 
-def _issue_request(symbol, **kwargs):
+def _issue_request(**kwargs):
   timeout = kwargs.pop('timeout', pyu.env('FINDATA_TIMEOUT', 90))
   api_key = kwargs.pop('api_key', None)
   params = dict(access_key=api_key)
