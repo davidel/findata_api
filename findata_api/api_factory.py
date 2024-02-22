@@ -98,7 +98,7 @@ def select_api(start_date, end_date, data_step):
     api_kinds.remove(_ARGS.api)
 
   for kind in api_kinds:
-    api = _APIS[kind].create_api(_ARGS)
+    api = create_api(name=kind)
     if api.range_supported(start_date, end_date, data_step):
       return api
 
