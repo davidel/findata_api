@@ -152,7 +152,7 @@ def normalize_columns(cols=None, df=None):
 
 
 def get_df_columns_symbols(df):
-  return sorted(split_columns(df.columns.tolist()).keys())
+  return sorted(split_columns(df.columns).keys())
 
 
 def get_df_column_unique(df, name):
