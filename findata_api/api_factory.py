@@ -2,7 +2,6 @@ import argparse
 import collections
 import importlib
 import os
-import re
 import threading
 
 from py_misc_utils import alog
@@ -12,11 +11,9 @@ from py_misc_utils import utils as pyu
 
 def _get_available_modules():
   modules = []
-  for fname in os.listdir(os.path.dirname(__file__)):
-    # To add a new API implement $API + '_api.py' module within this folder.
-    m = re.match(r'(.*)_api\.py$', fname)
-    if m:
-      modules.append(m.group(1))
+  # To add a new API implement $API + '_api.py' module within this folder.
+  for fname, m in pyu.re_enumerate_files(os.path.dirname(__file__), r'(.*)_api\.py$'):
+    modules.append(m.group(1))
 
   order = {name: len(modules) - i for i, name in enumerate(os.getenv(
     'FINDATA_API_ORDER',
