@@ -441,7 +441,7 @@ def reshape_dataframe(df):
   dtype = np.float64 if any(is64) else np.float32
 
   groups = pyp.get_dataframe_groups(df, ('t',))
-  times = sorted([t for (t,) in groups.keys()])
+  times = sorted(t for (t,) in groups.keys())
   tidx = pyu.make_index_dict(times)
 
   symbols = get_df_column_unique(df, 'symbol')
@@ -450,7 +450,7 @@ def reshape_dataframe(df):
 
   data = np.full((len(times), len(rcols)), invalid_value(dtype), dtype=dtype)
 
-  cdata = tuple([(c, df[c]) for c in cols])
+  cdata = tuple((c, df[c]) for c in cols)
   sym_data = df['symbol']
 
   for (t,), g in groups.items():
