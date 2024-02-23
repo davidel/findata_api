@@ -358,7 +358,7 @@ def fixup_dataframe(df):
   holes = np.argwhere(_is_hole(np_data))
   data = np.copy(np_data)
   q = collections.defaultdict(set)
-  for i in range(0, len(holes)):
+  for i in range(len(holes)):
     x, y = holes[i]
     sym, field = split_field(cols[y])
     if sym:
@@ -497,7 +497,7 @@ def get_nearest_candel(api, symbols, date):
 
   delta = datetime.timedelta(hours=1)
   data_step = '1Min'
-  for i in range(0, 10):
+  for i in range(10):
     left_symbols = sorted(set(symbols) - set(candels.keys()))
     if not left_symbols:
       break

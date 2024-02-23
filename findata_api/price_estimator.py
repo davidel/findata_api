@@ -253,7 +253,7 @@ def _storage_append(dfs, stg, symbols=None):
     for rec in df.itertuples(name=None, index=False):
       sym = rec[si]
       if syms is None or sym in syms:
-        args = [rec[rmap[i]] for i in range(0, len(rmap))]
+        args = [rec[rmap[i]] for i in range(len(rmap))]
         stg.append(sym, *args)
 
   return stg.to_numpy()
