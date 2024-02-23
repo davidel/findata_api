@@ -13,7 +13,7 @@ from . import utils as ut
 try:
   import yfinance as yf
 
-  API_NAME = 'YFINANCE'
+  MODULE_NAME = 'YFINANCE'
 
   def add_api_options(parser):
     pass
@@ -22,7 +22,7 @@ try:
     return API(api_rate=args.api_rate)
 
 except ImportError:
-  API_NAME = None
+  MODULE_NAME = None
 
 
 _COLUMNS = ['Close', 'Open', 'Low', 'High', 'Volume']

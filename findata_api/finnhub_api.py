@@ -13,7 +13,7 @@ from . import utils as ut
 try:
   import finnhub
 
-  API_NAME = 'FINNHUB'
+  MODULE_NAME = 'FINNHUB'
 
   def add_api_options(parser):
     parser.add_argument('--finnhub_key', type=str,
@@ -24,7 +24,7 @@ try:
     return API(api_key=args.finnhub_key, api_rate=args.api_rate)
 
 except ImportError:
-  API_NAME = None
+  MODULE_NAME = None
 
 
 _DATA_STEPS = {

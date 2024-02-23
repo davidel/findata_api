@@ -20,7 +20,7 @@ from . import utils as ut
 try:
   import alpaca_trade_api as alpaca
 
-  API_NAME = 'ALPACA'
+  MODULE_NAME = 'ALPACA'
 
   def add_api_options(parser):
     parser.add_argument('--alpaca_key', type=str,
@@ -35,7 +35,7 @@ try:
                api_url=args.alpaca_url, api_rate=args.api_rate)
 
 except ImportError:
-  API_NAME = None
+  MODULE_NAME = None
 
 
 _DATA_STEPS = {

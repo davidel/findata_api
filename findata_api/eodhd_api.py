@@ -15,7 +15,7 @@ from . import api_base
 from . import utils as ut
 
 
-API_NAME = 'EODHD'
+MODULE_NAME = 'EODHD'
 
 def add_api_options(parser):
   parser.add_argument('--eodhd_key', type=str,

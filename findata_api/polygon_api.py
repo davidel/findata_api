@@ -19,7 +19,7 @@ from . import utils as ut
 try:
   import polygon
 
-  API_NAME = 'POLYGON'
+  MODULE_NAME = 'POLYGON'
 
   def add_api_options(parser):
     parser.add_argument('--polygon_key', type=str,
@@ -30,7 +30,7 @@ try:
     return API(api_key=args.polygon_key, api_rate=args.api_rate)
 
 except ImportError:
-  API_NAME = None
+  MODULE_NAME = None
 
 
 _DATA_STEPS = {

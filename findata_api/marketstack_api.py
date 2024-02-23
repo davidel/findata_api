@@ -17,7 +17,7 @@ from . import api_base
 from . import utils as ut
 
 
-API_NAME = 'MARKETSTACK'
+MODULE_NAME = 'MARKETSTACK'
 
 def add_api_options(parser):
   parser.add_argument('--marketstack_key', type=str,

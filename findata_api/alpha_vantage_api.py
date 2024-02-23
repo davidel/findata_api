@@ -16,7 +16,7 @@ from . import api_base
 from . import utils as ut
 
 
-API_NAME = 'ALPHA_VANTAGE'
+MODULE_NAME = 'ALPHA_VANTAGE'
 
 def add_api_options(parser):
   parser.add_argument('--alpha_vantage_key', type=str,
