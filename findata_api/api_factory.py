@@ -31,8 +31,9 @@ def _detect_apis():
   apis = collections.OrderedDict()
   for mod_name in _get_available_modules():
     mod = importlib.import_module(f'{parent}.{mod_name}_api')
-    if mod.MODULE_NAME is not None:
-      apis[mod.MODULE_NAME] = mod
+    mname = getattr(mod, 'MODULE_NAME', None)
+    if mname is not None:
+      apis[mname] = mod
 
   return apis
 
