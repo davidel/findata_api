@@ -8,6 +8,7 @@ import orjson
 import pandas as pd
 from py_misc_utils import alog
 from py_misc_utils import assert_checks as tas
+from py_misc_utils import date_utils as pyd
 from py_misc_utils import pd_utils as pyp
 from py_misc_utils import throttle
 from py_misc_utils import utils as pyu
@@ -299,7 +300,7 @@ class API(api_base.API):
                                      _MAX_BASE_BARS)
     start_date, end_date = ut.infer_time_range(start_date, end_date, step_delta,
                                                limit=xlimit,
-                                               tz=ut.us_eastern_timezone())
+                                               tz=pyd.us_eastern_timezone())
     tsteps = ut.break_period_in_dates_list(start_date, end_date, step_delta, xlimit)
     dfs = []
     for ts in tsteps:
