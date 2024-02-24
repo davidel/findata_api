@@ -281,6 +281,7 @@ def get_sp500_symbols():
   pds = pd.read_html('https://en.wikipedia.org/wiki/List_of_S%26P_500_companies')
   # There are 2 tables on the Wikipedia page, get the first table.
   stable = pds[0]
+
   return sorted(stable['Symbol'].tolist())
 
 
