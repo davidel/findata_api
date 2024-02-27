@@ -5,6 +5,7 @@ import datetime
 import math
 import os
 import re
+import time
 
 import numpy as np
 import pandas as pd
@@ -541,4 +542,23 @@ def csv_parse_columns(text):
   pos = text.find('\n')
 
   return text[: pos].split(',') if pos > 0 else []
+
+
+def wait_for_market_open(api):
+  tas.check(api.supports_trading, msg=f'{api.name} API does not support trading')
+
+  now = pyd.now()
+  market_open, market_close = api.get_market_hours(now)
+  if now > market_close:
+    market_open, market_close = api.get_market_hours(
+      now + datetime.timedelta(days=1))
+
+  if market_open > now:
+    wait = market_open - now
+    alog.info(f'Market will open at {market_open}, waiting for {wait} ...')
+    time.sleep(wait.total_seconds())
+
+  alog.debug0(f'Market is open since {market_open}')
+
+  return market_open, market_close
 
