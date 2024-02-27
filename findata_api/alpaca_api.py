@@ -98,34 +98,30 @@ def _maybe_date(dstr):
   return pyd.parse_date(str(dstr)) if dstr else None
 
 
-def _astype(v, xtype):
-  return xtype(v) if v is not None else None
-
-
 def _marshal_order(o):
   return api_types.Order(id=o.id,
                          symbol=o.symbol,
-                         quantity=_astype(o.qty, float),
+                         quantity=pyu.cast(o.qty, float),
                          side=o.side,
                          type=o.type,
-                         limit=_astype(o.limit_price, float),
-                         stop=_astype(o.stop_price, float),
+                         limit=pyu.cast(o.limit_price, float),
+                         stop=pyu.cast(o.stop_price, float),
                          status=o.status,
                          created=_maybe_date(o.created_at),
                          filled=_maybe_date(o.filled_at),
-                         filled_quantity=_astype(o.filled_qty, float),
-                         filled_avg_price=_astype(o.filled_avg_price, float))
+                         filled_quantity=pyu.cast(o.filled_qty, float),
+                         filled_avg_price=pyu.cast(o.filled_avg_price, float))
 
 
 def _marshal_position(p):
   return api_types.Position(symbol=p.symbol,
-                            quantity=_astype(p.qty, float),
-                            value=_astype(p.market_value, float))
+                            quantity=pyu.cast(p.qty, float),
+                            value=pyu.cast(p.market_value, float))
 
 
 def _marshal_account(a):
   return api_types.Account(id=a.account_number,
-                           buying_power=_astype(a.buying_power, float))
+                           buying_power=pyu.cast(a.buying_power, float))
 
 
 def _get_stream_ts(v):
