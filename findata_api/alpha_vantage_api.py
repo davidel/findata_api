@@ -46,7 +46,7 @@ def _issue_request(func, **kwargs):
   scols = set(cols)
 
   tas.check(all(c in scols for c in _RESP_COLUMNS),
-            msg=f'Missing columns: {_RESP_COLUMNS - scols}\nResponse:\n{resp.text}')
+            msg=f'Columns: {cols}\nMissing columns: {_RESP_COLUMNS - scols}\nResponse:\n{resp.text}')
 
   time_col = None
   for c in _TIME_COLUMNS:
