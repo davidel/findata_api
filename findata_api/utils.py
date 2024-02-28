@@ -388,7 +388,7 @@ def transform_raw_data(df, start_date=None, end_date=None):
   alog.debug1(f'Reshaping data ...')
   df = reshape_dataframe(df)
 
-  if start_date or end_date:
+  if start_date is not None or end_date is not None:
     alog.debug1(f'Time filtering data ...')
     df = time_filter_dataframe(df, start_date=start_date, end_date=end_date)
 
