@@ -206,7 +206,7 @@ class Stream:
     alog.warning(f'Streaming connection closed: ({status}) {msg}')
     if ctx.started:
       # Cannot do the reconnect work from inside the WebSocket callback. Just spawn
-      # an async thread and do it from there. We WebSocket API will call the on-close
+      # an async thread and do it from there. The WebSocket API will call the on-close
       # callback one all the teardown is completed, making it safe to issue a new
       # run_async().
       pyu.run_async(pyu.xwrap_fn(self._reconnect))
