@@ -343,35 +343,43 @@ class API(api_base.API):
 
     return [_marshal_position(p) for p in positions]
 
-  def fetch_data(self, symbols, start_date=None, end_date=None, data_step='5Min',
-                 limit=None, dtype=None):
-    step_delta = ut.get_data_step_delta(data_step)
-    start_date, end_date = ut.infer_time_range(start_date, end_date, step_delta,
-                                               limit=limit,
-                                               tz=pyd.us_eastern_timezone())
-
+  def _break_date_range(self, start_date, end_date, data_step):
     # At Alpaca level API we need to use an hard limit, and break time range.
-    tsteps = ut.break_period_in_dates_list(start_date, end_date, step_delta, limit or 1000)
-    dfs = []
-    for ts in tsteps:
-      start = ts.start.isoformat() if ts.start else None
-      end = ts.end.isoformat() if ts.end else None
+    limit = pyu.getenv('APCA_LIMIT', dtype=int, defval=5000)
 
-      alog.debug0(f'Fetch: start={start or "*"}\tend={end or "*"}\tlimit={ts.limit}')
+    dstep = ut.get_data_step_delta(data_step)
+    if dstep >= datetime.timedelta(days=1):
+      range_step = limit * datetime.timedelta(days=1)
+    else:
+      range_step = limit * datetime.timedelta(minutes=1)
+
+    tsteps = ut.break_period_in_dates_list(start_date, end_date, range_step)
+
+    return tsteps, limit
+
+  def fetch_data(self, symbols, start_date, end_date, data_step='5Min', dtype=None):
+    tsteps, limit = self._break_date_range(start_date, end_date, data_step)
+
+    dfs = []
+    for tstart, tend in tsteps:
+      start = tstart.isoformat()
+      end = tend.isoformat()
+
+      alog.debug0(f'Fetch: start={start}\tend={end}')
       for srange in range(0, len(symbols), self._symbols_per_step):
         step_symbols = symbols[srange: srange + self._symbols_per_step]
         with self._api_throttle.trigger():
           bars = self._api.get_bars(step_symbols, _map_data_step(data_step),
-                                      limit=ts.limit,
-                                      start=start,
-                                      end=end)
+                                    limit=limit,
+                                    start=start,
+                                    end=end)
         bsdf = _get_df_from_bars(bars, dtype=dtype)
         if not bsdf.empty:
           dfs.append(bsdf)
 
     df = pd.concat(dfs, ignore_index=True) if dfs else None
     if df is not None:
-      df = ut.purge_fetched_data(df, start_date, end_date, limit, step_delta)
+      df = ut.purge_fetched_data(df, start_date, end_date, data_step)
 
     alog.debug0(f'Fetched {len(df) if df is not None else 0} records')
 

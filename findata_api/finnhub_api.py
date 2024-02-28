@@ -78,10 +78,7 @@ class API(api_base.API):
 
     return df
 
-  def fetch_data(self, symbols, start_date=None, end_date=None, data_step='5Min',
-                 limit=None, dtype=None):
-    step_delta = ut.get_data_step_delta(data_step)
-    start_date, end_date = ut.infer_time_range(start_date, end_date, step_delta, limit=limit)
+  def fetch_data(self, symbols, start_date, end_date, data_step='5Min', dtype=None):
     alog.debug0(f'Fetching from {start_date} to {end_date} symbol {symbols}')
 
     start_epoch = int(start_date.timestamp())
@@ -94,7 +91,7 @@ class API(api_base.API):
 
     df = pd.concat(dfs, ignore_index=True) if dfs else None
     if df is not None:
-      df = ut.purge_fetched_data(df, start_date, end_date, limit, step_delta)
+      df = ut.purge_fetched_data(df, start_date, end_date, data_step)
 
     return df
 

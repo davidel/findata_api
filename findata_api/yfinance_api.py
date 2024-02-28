@@ -101,11 +101,7 @@ class API(api_base.API):
 
     return df
 
-  def fetch_single(self, symbol, start_date=None, end_date=None, data_step='5Min',
-                   limit=None, dtype=None):
-    step_delta = ut.get_data_step_delta(data_step)
-    start_date, end_date = ut.infer_time_range(start_date, end_date, step_delta,
-                                               limit=limit)
+  def _fetch_single(self, symbol, start_date, end_date, data_step='5Min', dtype=None):
     alog.debug0(f'Fetching from {start_date} to {end_date} symbol {symbol}')
 
     interval = _map_data_step(data_step)
@@ -137,17 +133,17 @@ class API(api_base.API):
 
     return df
 
-  def fetch_data(self, symbols, start_date=None, end_date=None, data_step='5Min',
-                 limit=None, dtype=None):
+  def fetch_data(self, symbols, start_date, end_date, data_step='5Min', dtype=None):
     dfs = []
     for symbol in symbols:
-      df = self.fetch_single(symbol, start_date=start_date, end_date=end_date,
-                             data_step=data_step, limit=limit, dtype=dtype)
+      df = self._fetch_single(symbol, start_date, end_date,
+                              data_step=data_step,
+                              dtype=dtype)
       dfs.append(df)
 
     df = pd.concat(dfs, ignore_index=True) if dfs else None
     if df is not None:
-      df = ut.purge_fetched_data(df, start_date, end_date, limit, data_step)
+      df = ut.purge_fetched_data(df, start_date, end_date, data_step)
 
     return df
 

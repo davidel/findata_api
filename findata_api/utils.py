@@ -185,41 +185,13 @@ def get_data_step_delta(data_step):
   alog.xraise(RuntimeError, f'Invalid data step: {data_step}')
 
 
-def infer_time_range(start_date, end_date, data_step, limit=None, tz=None):
-  limit = limit or 10
-  step_delta = get_data_step_delta(data_step) * limit
+def break_period_in_dates_list(start_date, end_date, step):
+  dates = []
+  while end_date > start_date:
+    dates.append((start_date, min(start_date + step, end_date)))
+    start_date += step
 
-  if not end_date:
-    if start_date:
-      end_date = start_date + step_delta
-      tnow = pyd.now(tz=start_date.tzinfo)
-      if end_date > tnow:
-        end_date = tnow
-    else:
-      end_date = pyd.now(tz=tz)
-
-  if not start_date:
-    start_date = end_date - step_delta
-
-  return start_date, end_date
-
-
-def break_period_in_dates_list(start_date, end_date, data_step, limit):
-  step_delta = get_data_step_delta(data_step)
-  delta = step_delta * limit
-  step_start_date = start_date
-  dates_list = []
-  while end_date > (step_start_date + delta):
-    dates_list.append(pyu.make_object(start=step_start_date,
-                                      end=step_start_date + delta,
-                                      limit=limit))
-    step_start_date += delta
-
-  end_limit = int((end_date - step_start_date) / step_delta) + 1
-  dates_list.append(pyu.make_object(start=step_start_date, end=end_date,
-                                    limit=end_limit))
-
-  return dates_list
+  return tuple(dates)
 
 
 def time_filter_dataframe(df, start_date=None, end_date=None, col=None):
@@ -257,19 +229,13 @@ def dataframe_column_time_shift(df, name, delta):
   pyp.dataframe_column_rewrite(df, name, adjust)
 
 
-def purge_fetched_data(df, start_date, end_date, limit, data_step):
+def purge_fetched_data(df, start_date, end_date, data_step):
   alog.debug0(f'Sorting by time')
   df = df.sort_values('t', ignore_index=True)
 
   if start_date or end_date:
     alog.debug0(f'Time filtering fetched data')
     df = time_filter_dataframe(df, start_date=start_date, end_date=end_date, col='t')
-  if limit is not None:
-    if start_date:
-      if not end_date:
-        df = pyp.limit_per_group(df, ['symbol'], limit)
-    else:
-      df = pyp.limit_per_group(df, ['symbol'], -limit)
 
   # We assign the bar timestamp to the end of the bar, to make it consistent with
   # volume/tick bars, for which an ending timestamp make more sense.

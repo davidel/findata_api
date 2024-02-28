@@ -126,19 +126,13 @@ class API(api_base.API):
 
     return dfs
 
-  def fetch_data(self, symbols, start_date=None, end_date=None, data_step='5Min',
-                 limit=None, dtype=None):
-    alog.debug0(f'Fetch: start={start_date}\tend={end_date}\tlimit={limit}')
+  def fetch_data(self, symbols, start_date, end_date, data_step='5Min', dtype=None):
+    alog.debug0(f'Fetch: start={start_date}\tend={end_date}')
 
-    start_date, end_date = ut.infer_time_range(start_date, end_date, data_step,
-                                               limit=limit,
-                                               tz=pyd.us_eastern_timezone())
-
-    dfs = self._get_intraday_data(symbols, start_date, end_date,
-                                  data_step=data_step)
+    dfs = self._get_intraday_data(symbols, start_date, end_date, data_step=data_step)
 
     if dfs:
       df = pd.concat(dfs, ignore_index=True)
 
-      return ut.purge_fetched_data(df, start_date, end_date, limit, data_step)
+      return ut.purge_fetched_data(df, start_date, end_date, data_step)
 

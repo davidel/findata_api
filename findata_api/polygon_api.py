@@ -284,30 +284,29 @@ class API(api_base.API):
     self._stream.register(symbols, trade_handler=trade_handler, quote_handler=quote_handler)
     alog.debug1(f'Registration done!')
 
-  def _get_limited_limit(self, limit, span, step_delta, max_bars):
-    if span in ('minute', 'hour'):
+  def _get_limited_limit(self, span, step_delta, max_bars):
+    limit = pyu.getenv('POLYGON_LIMIT', dtype=int, defval=_DEFAULT_LIMIT)
+
+    if span in {'minute', 'hour'}:
       bar_limit = max_bars // int(step_delta.total_seconds() / 60)
     else:
       bar_limit = max_bars // int(step_delta.total_seconds() / 86400)
 
     return min(limit, max(bar_limit, 1))
 
-  def fetch_data(self, symbols, start_date=None, end_date=None, data_step='5Min',
-                 limit=None, dtype=None):
+  def fetch_data(self, symbols, start_date, end_date, data_step='5Min', dtype=None):
     mult, span = _map_data_step(data_step)
     step_delta = ut.get_data_step_delta(data_step)
-    xlimit = self._get_limited_limit(limit or _DEFAULT_LIMIT, span, step_delta,
-                                     _MAX_BASE_BARS)
-    start_date, end_date = ut.infer_time_range(start_date, end_date, step_delta,
-                                               limit=xlimit,
-                                               tz=pyd.us_eastern_timezone())
-    tsteps = ut.break_period_in_dates_list(start_date, end_date, step_delta, xlimit)
-    dfs = []
-    for ts in tsteps:
-      start = int(ts.start.timestamp() * 1000)
-      end = int(ts.end.timestamp() * 1000)
 
-      alog.debug0(f'Fetch: start={ts.start}\tend={ts.end}\tlimit={ts.limit}')
+    xlimit = self._get_limited_limit(span, step_delta, _MAX_BASE_BARS)
+    tsteps = ut.break_period_in_dates_list(start_date, end_date, step_delta * xlimit)
+
+    dfs = []
+    for tstart, tend in tsteps:
+      start = int(tstart.timestamp() * 1000)
+      end = int(tend.timestamp() * 1000)
+
+      alog.debug0(f'Fetch: start={ts.start}\tend={ts.end}')
       for symbol in symbols:
         with self._api_throttle.trigger():
           resp = self._api.stocks_equities_aggregates(symbol,
@@ -324,7 +323,7 @@ class API(api_base.API):
 
     df =  pd.concat(dfs, ignore_index=True) if dfs else None
     if df is not None:
-      df = ut.purge_fetched_data(df, start_date, end_date, limit, data_step)
+      df = ut.purge_fetched_data(df, start_date, end_date, data_step)
 
     alog.debug0(f'Fetched {len(df) if df is not None else 0} records')
 
