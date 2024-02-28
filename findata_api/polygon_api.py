@@ -107,12 +107,12 @@ def _marshal_stream_quote(q):
                                ask_price=q['ap'])
 
 
-def _sublist(symbols, trades, quotes):
+def _sublist(symbols, handlers):
   sub = []
   for sym in symbols:
-    if trades:
+    if 'trades' in handlers:
       sub.append(f'T.{sym}')
-    if quotes:
+    if 'quotes' in handlers:
       sub.append(f'Q.{sym}')
 
   return sub
@@ -121,8 +121,7 @@ def _sublist(symbols, trades, quotes):
 class Stream:
 
   DEFAULT_CTX = dict(
-    trade_handler=None,
-    quote_handler=None,
+    handlers=dict(),
     started=False,
     ws_symbols=(),
   )
@@ -167,9 +166,7 @@ class Stream:
         # Prevent _register() from unregistering existing symbols, as the connection
         # is not the same they were registered into.
         self._new_ctx(ws_symbols=())
-        self._register(ctx.ws_symbols,
-                       trade_handler=ctx.trade_handler,
-                       quote_handler=ctx.quote_handler)
+        self._register(ctx.ws_symbols, ctx.handlers)
 
   def _start(self):
     alog.debug2(f'Starting Polygon WebSocket connection')
@@ -224,31 +221,31 @@ class Stream:
     for d in data:
       kind = d.get('ev', None)
       if kind == 'Q':
-        if ctx.quote_handler is not None:
-          ctx.quote_handler(_marshal_stream_quote(d))
+        handler = ctx.handlers.get('quotes', None)
+        if handler is not None:
+          handler(_marshal_stream_quote(d))
       elif kind == 'T':
-        if ctx.trade_handler is not None:
-          ctx.trade_handler(_marshal_stream_trade(d))
+        handler = ctx.handlers.get('trades', None)
+        if handler is not None:
+          handler(_marshal_stream_trade(d))
       else:
         alog.debug0(f'Stream Message: {d}')
 
-  def _register(self, symbols, trade_handler=None, quote_handler=None):
+  def _register(self, symbols, handlers):
     ctx = self._ctx
-    unsub = _sublist(ctx.ws_symbols, ctx.trade_handler, ctx.quote_handler)
+    unsub = _sublist(ctx.ws_symbols, handlers)
     if unsub:
       self._ws_api.unsubscribe(*unsub)
 
-    sub = _sublist(symbols, trade_handler, quote_handler)
+    sub = _sublist(symbols, handlers)
     if sub:
       self._ws_api.subscribe(*sub)
 
-    self._new_ctx(ws_symbols=tuple(symbols),
-                  trade_handler=trade_handler,
-                  quote_handler=quote_handler)
+    self._new_ctx(ws_symbols=tuple(symbols), handlers=handlers)
 
-  def register(self, symbols, trade_handler=None, quote_handler=None):
+  def register(self, symbols, handlers):
     with self._lock:
-      self._register(symbols, trade_handler=trade_handler, quote_handler=quote_handler)
+      self._register(symbols, handlers)
 
 
 class API(api_base.API):
@@ -277,11 +274,11 @@ class API(api_base.API):
   def supports_streaming(self):
     return True
 
-  def register_stream_handlers(self, symbols, trade_handler=None, quote_handler=None):
+  def register_stream_handlers(self, symbols, handlers):
     tas.check_is_not_none(self._stream, msg=f'Streaming is not enabled for the Polygon API')
 
-    alog.debug1(f'Registering Streaming: trades={trade_handler is not None}\tquotes={quote_handler is not None}\tsymbols={symbols}')
-    self._stream.register(symbols, trade_handler=trade_handler, quote_handler=quote_handler)
+    alog.debug1(f'Registering Streaming: handlers={tuple(handlers.keys())}\tsymbols={symbols}')
+    self._stream.register(symbols, handlers)
     alog.debug1(f'Registration done!')
 
   def _get_limited_limit(self, span, step_delta, max_bars):

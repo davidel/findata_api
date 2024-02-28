@@ -157,8 +157,7 @@ class Stream:
       data_feed=data_feed)
 
     self._stream_thread = None
-    self._trade_handler = None
-    self._quote_handler = None
+    self._handlers = dict()
     self._symbols = None
     self._lock = threading.Lock()
     self._thread_loop = None
@@ -171,16 +170,17 @@ class Stream:
     self.stop()
 
   async def _stream_handler(self, d):
-    with self._lock:
-      trade_handler, quote_handler = self._trade_handler, self._quote_handler
+    handlers = self._handlers
 
     kind = d.get('T', None)
     if kind == 'q':
-      if quote_handler is not None:
-        quote_handler(_marshal_stream_quote(d))
+      handler = handlers.get('quotes', None)
+      if handler is not None:
+        handler(_marshal_stream_quote(d))
     elif kind == 't':
-      if trade_handler is not None:
-        trade_handler(_marshal_stream_trade(d))
+      handler = handlers.get('trades', None)
+      if handler is not None:
+        handler(_marshal_stream_trade(d))
 
   def _stream_thread_fn(self):
     self._thread_loop = asyncio.new_event_loop()
@@ -197,14 +197,14 @@ class Stream:
       asyncio.run_coroutine_threadsafe(self._conn.stop_ws(), self._thread_loop)
       self._stream_thread.join()
 
-  def register(self, symbols, trade_handler=None, quote_handler=None):
+  def register(self, symbols, handlers):
     with self._lock:
       if self._symbols:
         self._conn.unsubscribe_trades(*self._symbols)
         self._conn.unsubscribe_quotes(*self._symbols)
         self._symbols = None
 
-      self._trade_handler, self._quote_handler = trade_handler, quote_handler
+      self._handlers = handlers
 
       if symbols:
         self._conn.subscribe_trades(self._stream_handler, *symbols)
@@ -240,7 +240,7 @@ class API(api_base.API):
   def supports_trading(self):
     return True
 
-  def register_stream_handlers(self, symbols, trade_handler=None, quote_handler=None):
+  def register_stream_handlers(self, symbols, handlers):
     if self._stream is not None:
       alog.debug1(f'Stopping previous real time stream')
       self._stream.stop()
@@ -250,7 +250,7 @@ class API(api_base.API):
       self._stream = Stream(self._api_key, self._api_secret,
                             data_stream_url=self._data_stream_url,
                             data_feed=self._data_feed)
-      self._stream.register(symbols, trade_handler=trade_handler, quote_handler=quote_handler)
+      self._stream.register(symbols, handlers)
     else:
       self._stream = None
 
