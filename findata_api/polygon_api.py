@@ -306,7 +306,7 @@ class API(api_base.API):
       start = int(tstart.timestamp() * 1000)
       end = int(tend.timestamp() * 1000)
 
-      alog.debug0(f'Fetch: start={ts.start}\tend={ts.end}')
+      alog.debug0(f'Fetch: start={tstart}\tend={tend}')
       for symbol in symbols:
         with self._api_throttle.trigger():
           resp = self._api.stocks_equities_aggregates(symbol,
