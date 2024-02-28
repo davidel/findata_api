@@ -298,6 +298,8 @@ class API(api_base.API):
     mult, span = _map_data_step(data_step)
     step_delta = ut.get_data_step_delta(data_step)
 
+    start_date = pyd.align(start_date, step_delta)
+
     xlimit = self._get_limited_limit(span, step_delta, _MAX_BASE_BARS)
     tsteps = ut.break_period_in_dates_list(start_date, end_date, step_delta * xlimit)
 
