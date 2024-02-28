@@ -506,8 +506,12 @@ def save_reshaped_data(df, path, merge=False, dtype=np.float32):
 
 def csv_parse_columns(text):
   pos = text.find('\n')
+  if pos > 0:
+    headers = text[: pos].strip()
+    if headers:
+      return [c.strip() for c in headers.split(',')]
 
-  return [c.strip() for c in text[: pos].split(',')] if pos > 0 else []
+  return []
 
 
 def wait_for_market_open(api):
