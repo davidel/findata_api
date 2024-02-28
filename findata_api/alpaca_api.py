@@ -144,6 +144,16 @@ def _marshal_stream_quote(q):
                                ask_price=q['ap'])
 
 
+def _marshal_stream_bar(b):
+  return api_types.StreamBar(timestamp=_get_stream_ts(b['t']),
+                             symbol=b['S'],
+                             open=b['o'],
+                             high=b['h'],
+                             low=b['l'],
+                             close=b['c'],
+                             volume=b['v'])
+
+
 class Stream:
 
   def __init__(self, api_key, api_secret,
@@ -181,6 +191,10 @@ class Stream:
       handler = handlers.get('trades', None)
       if handler is not None:
         handler(_marshal_stream_trade(d))
+    elif kind == 'b':
+      handler = handlers.get('bars', None)
+      if handler is not None:
+        handler(_marshal_stream_bar(d))
 
   def _stream_thread_fn(self):
     self._thread_loop = asyncio.new_event_loop()

@@ -20,3 +20,7 @@ StreamQuote = collections.namedtuple(
     'StreamQuote',
     'timestamp, symbol, bid_size, bid_price, ask_size, ask_price')
 
+StreamBar = collections.namedtuple(
+    'StreamBar',
+    'timestamp, symbol, open, high, low, close, volume')
+

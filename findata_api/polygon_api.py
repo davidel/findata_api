@@ -107,6 +107,16 @@ def _marshal_stream_quote(q):
                                ask_price=q['ap'])
 
 
+def _marshal_stream_bar(b):
+  return api_types.StreamBar(timestamp=_get_stream_ts(b['s']),
+                             symbol=b['sym'],
+                             open=b['o'],
+                             high=b['h'],
+                             low=b['l'],
+                             close=b['c'],
+                             volume=b['v'])
+
+
 def _sublist(symbols, handlers):
   sub = []
   for sym in symbols:
@@ -114,6 +124,8 @@ def _sublist(symbols, handlers):
       sub.append(f'T.{sym}')
     if 'quotes' in handlers:
       sub.append(f'Q.{sym}')
+    if 'bars' in handlers:
+      sub.append(f'A.{sym}')
 
   return sub
 
@@ -228,6 +240,10 @@ class Stream:
         handler = ctx.handlers.get('trades', None)
         if handler is not None:
           handler(_marshal_stream_trade(d))
+      elif kind == 'A':
+        handler = ctx.handlers.get('bars', None)
+        if handler is not None:
+          handler(_marshal_stream_bar(d))
       else:
         alog.debug0(f'Stream Message: {d}')
 
