@@ -169,17 +169,17 @@ def get_data_step_delta(data_step):
     alog.xraise(RuntimeError, f'Invalid data step: {data_step}')
   count, unit = m.group(1), m.group(3)
   n = float(count) if count else 1
-  if unit in ('s', 'sec', 'second'):
+  if unit in {'s', 'sec', 'second'}:
     return datetime.timedelta(seconds=n)
-  if unit in ('m', 'min', 'minute'):
+  if unit in {'m', 'min', 'minute'}:
     return datetime.timedelta(minutes=n)
-  if unit in ('h', 'hour'):
+  if unit in {'h', 'hour'}:
     return datetime.timedelta(hours=n)
-  if unit in ('d', 'day'):
+  if unit in {'d', 'day'}:
     return datetime.timedelta(days=n)
-  if unit in ('w', 'wk', 'week'):
+  if unit in {'w', 'wk', 'week'}:
     return datetime.timedelta(days=n * 7)
-  if unit in ('mo', 'month'):
+  if unit in {'mo', 'month'}:
     return datetime.timedelta(days=n * 30)
 
   alog.xraise(RuntimeError, f'Invalid data step: {data_step}')
