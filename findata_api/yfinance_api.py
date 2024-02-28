@@ -110,7 +110,7 @@ class API(api_base.API):
 
     tkr = yf.Ticker(symbol)
 
-    if step_delta < datetime.timedelta(minutes=5):
+    if ut.get_data_step_delta(data_step) < datetime.timedelta(minutes=5):
       # Anything less than 5 minutes needs to be broken up in 7 days chunks.
       delta = datetime.timedelta(days=7)
       start = ystart_date
