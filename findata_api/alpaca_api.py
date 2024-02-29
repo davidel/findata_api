@@ -260,11 +260,14 @@ class API(api_base.API):
       self._stream.stop()
 
     if symbols:
-      alog.debug1(f'Creating new real time stream for {symbols}')
+      alog.debug1(f'Registering Streaming: handlers={tuple(handlers.keys())}\tsymbols={symbols}')
+
       self._stream = Stream(self._api_key, self._api_secret,
                             data_stream_url=self._data_stream_url,
                             data_feed=self._data_feed)
       self._stream.register(symbols, handlers)
+
+      alog.debug1(f'Registration done!')
     else:
       self._stream = None
 

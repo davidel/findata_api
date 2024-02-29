@@ -294,7 +294,9 @@ class API(api_base.API):
     tas.check_is_not_none(self._stream, msg=f'Streaming is not enabled for the Polygon API')
 
     alog.debug1(f'Registering Streaming: handlers={tuple(handlers.keys())}\tsymbols={symbols}')
+
     self._stream.register(symbols, handlers)
+
     alog.debug1(f'Registration done!')
 
   def _get_limited_limit(self, span, step_delta, max_bars):
