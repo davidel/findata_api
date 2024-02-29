@@ -240,7 +240,7 @@ class Stream:
         handler = ctx.handlers.get('trades', None)
         if handler is not None:
           handler(_marshal_stream_trade(d))
-      elif kind == 'A':
+      elif kind[0] == 'A':
         handler = ctx.handlers.get('bars', None)
         if handler is not None:
           handler(_marshal_stream_bar(d))
