@@ -34,19 +34,11 @@ _BAR_RENAMES = {
   'Volume': 'v'
 }
 _DATA_STEPS = {
-  '1min': '1m',
-  '5min': '5m',
-  '15min': '15m',
-  '30min': '30m',
-  '60min': '60m',
-  '90min': '90m',
+  'min': 'm',
+  'day': 'd',
+  'week': 'wk',
+  'month': 'mo',
 }
-
-
-def _map_data_step(data_step):
-  data_step = data_step.lower()
-
-  return _DATA_STEPS.get(data_step, data_step)
 
 
 def _get_yahoo_date(dt):
@@ -104,7 +96,7 @@ class API(api_base.API):
   def _fetch_single(self, symbol, start_date, end_date, data_step='5Min', dtype=None):
     alog.debug0(f'Fetching from {start_date} to {end_date} symbol {symbol}')
 
-    interval = _map_data_step(data_step)
+    interval = ut.map_data_step(data_step, _DATA_STEPS)
     ystart_date = _get_yahoo_date(start_date)
     yend_date = _get_yahoo_date(end_date)
 

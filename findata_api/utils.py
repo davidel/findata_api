@@ -185,6 +185,16 @@ def get_data_step_delta(data_step):
   alog.xraise(RuntimeError, f'Invalid data step: {data_step}')
 
 
+def map_data_step(ds, maps):
+  lds = ds.lower()
+  m = re.match(r'(\d*)([a-zA-Z].*)$', lds)
+  if m:
+    mu = maps.get(m.group(2), m.group(2))
+    return m.group(1) + mu
+
+  return lds
+
+
 def break_period_in_dates_list(start_date, end_date, step):
   dates = []
   while end_date > start_date:

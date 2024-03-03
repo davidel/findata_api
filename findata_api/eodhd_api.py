@@ -30,19 +30,10 @@ _QUERY_URL = 'https://eodhd.com/api/intraday'
 _TIME_COLUMN = 'Timestamp'
 _RESP_COLUMNS = {'Open', 'High', 'Low', 'Close', 'Volume'}
 _DATA_STEPS = {
-  '1min': '1m',
-  '5min': '5m',
-  '15min': '15m',
-  '30min': '30m',
-  '60min': '1h',
-  '1hour': '1h',
+  'min': 'm',
+  'hour': 'h',
+  'day': 'd',
 }
-
-
-def _map_data_step(data_step):
-  lowds = data_step.lower()
-
-  return _DATA_STEPS.get(lowds, lowds)
 
 
 def _issue_request(symbol, **kwargs):
@@ -127,7 +118,7 @@ class API(api_base.API):
       with self._api_throttle.trigger():
         df = _data_issue_request(symbol,
                                  api_key=self._api_key,
-                                 interval=_map_data_step(data_step),
+                                 interval=ut.map_data_step(data_step, _DATA_STEPS),
                                  **{'from': start_date.timestamp(),
                                     'to': end_date.timestamp()})
 

@@ -39,23 +39,12 @@ except ImportError:
 
 
 _DATA_STEPS = {
-  '1min': '1Min',
-  'minute': '1Min',
-  '5min': '5Min',
-  '15min': '15Min',
-  '1d': '1D',
-  '1day': '1D',
-  'day': '1D',
+  'min': 'Min',
+  'minute': 'Min',
+  'd': 'D',
+  'day': 'D',
 }
 _FETCH_ORDERS_MAX = 500
-
-
-def _map_data_step(data_step):
-  step = _DATA_STEPS.get(data_step.lower(), None)
-  if not step:
-    alog.xraise(RuntimeError, f'Unknown data step: {data_step}')
-
-  return step
 
 
 def _get_config(key, secret, url):
@@ -386,7 +375,7 @@ class API(api_base.API):
       for srange in range(0, len(symbols), self._symbols_per_step):
         step_symbols = symbols[srange: srange + self._symbols_per_step]
         with self._api_throttle.trigger():
-          bars = self._api.get_bars(step_symbols, _map_data_step(data_step),
+          bars = self._api.get_bars(step_symbols, ut.map_data_step(data_step, _DATA_STEPS),
                                     limit=limit,
                                     start=start,
                                     end=end)
