@@ -1,7 +1,6 @@
 import os
 import time
 
-import pandas as pd
 from py_misc_utils import alog
 from py_misc_utils import pd_utils as pyp
 from py_misc_utils import utils as pyu
