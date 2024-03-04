@@ -204,7 +204,7 @@ def _make_pkl_handler(path, kind, scols, shandler, stype,
 
   data = dict()
   for c in scols:
-    fn = fmap.get(c[0], c[0]) if fmap else c[0]
+    fn = fmap.get(c[0], c[0]) if fmap is not None else c[0]
     data[c[0]] = df[fn].to_numpy()
 
   def handler(i):
