@@ -76,23 +76,11 @@ def _log_function(lf, kind, cols, logit):
   return logfn
 
 
-def trades_file(fmt=None):
-  return f'{TRADES_FILE}.{fmt}' if fmt is not None else TRADES_FILE
-
-
-def quotes_file(fmt=None):
-  return f'{QUOTES_FILE}.{fmt}' if fmt is not None else QUOTES_FILE
-
-
-def bars_file(fmt=None):
-  return f'{BARS_FILE}.{fmt}' if fmt is not None else BARS_FILE
-
-
 def create_logging_handlers(path, stream_trades=True, stream_quotes=True,
                             stream_bars=True, logit=False):
   trade_handler = None
   if stream_trades:
-    trades_path = os.path.join(path, trades_file(fmt='csv'))
+    trades_path = os.path.join(path, f'{TRADES_FILE}.csv')
     trades_cols = tuple([c[0] for c in _TRADES_COLS])
     trade_handler = _log_function(
       _open_logfile(trades_path, ','.join(trades_cols)),
@@ -103,7 +91,7 @@ def create_logging_handlers(path, stream_trades=True, stream_quotes=True,
 
   quote_handler = None
   if stream_quotes:
-    quotes_path = os.path.join(path, quotes_file(fmt='csv'))
+    quotes_path = os.path.join(path, f'{QUOTES_FILE}.csv')
     quotes_cols = tuple([c[0] for c in _QUOTES_COLS])
     quote_handler = _log_function(
       _open_logfile(quotes_path, ','.join(quotes_cols)),
@@ -114,7 +102,7 @@ def create_logging_handlers(path, stream_trades=True, stream_quotes=True,
 
   bar_handler = None
   if stream_bars:
-    bars_path = os.path.join(path, bars_file(fmt='csv'))
+    bars_path = os.path.join(path, f'{BARS_FILE}.csv')
     bars_cols = tuple([c[0] for c in _BARS_COLS])
     bar_handler = _log_function(
       _open_logfile(bars_path, ','.join(bars_cols)),
@@ -328,13 +316,13 @@ _STREAMERS = (
 def create_streamer(path, trade_handler=None, quote_handler=None, bar_handler=None):
   if os.path.isdir(path):
     for sr in _STREAMERS:
-      trades_path = os.path.join(path, trades_file(fmt=sr.ext))
+      trades_path = os.path.join(path, f'{TRADES_FILE}.{sr.ext}')
       has_trades = os.path.exists(trades_path)
 
-      quotes_path = os.path.join(path, quotes_file(fmt=sr.ext))
+      quotes_path = os.path.join(path, f'{QUOTES_FILE}.{sr.ext}')
       has_quotes = os.path.exists(quotes_path)
 
-      bars_path = os.path.join(path, bars_file(fmt=sr.ext))
+      bars_path = os.path.join(path, f'{BARS_FILE}.{sr.ext}')
       has_bars = os.path.exists(bars_path)
 
       if ((trade_handler and has_trades) or
