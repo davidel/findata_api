@@ -166,6 +166,10 @@ class Stream:
 
       self._status_cv.notify()
 
+  def _has_status(self, status):
+    with self._lock:
+      return status not in self._status
+
   @staticmethod
   def _make_ctx(**kwargs):
     args = Stream.DEFAULT_CTX.copy()
@@ -275,7 +279,7 @@ class Stream:
         alog.debug0(f'Stream Message: {d}')
 
   def authenticate(self):
-    if not self._authenticated.is_set():
+    if not self._has_status('AUTHENTICATED'):
       alog.debug0(f'Authenticating to the Polygon streaming service')
       self._wait_status('CONNECTED')
       self._ws_api.authenticate()
