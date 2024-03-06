@@ -45,6 +45,7 @@ def _open_logfile(path, header):
   lf = open(path, mode='at')
   if lf.tell() == 0:
     lf.write(f'{header}\n')
+    lf.flush()
 
   return lf
 
