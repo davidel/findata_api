@@ -146,6 +146,7 @@ class Stream:
     self._status = {'CLOSED'}
     self._ctx = Stream._make_ctx()
     self._ws_api = polygon.WebSocketClient(polygon.STOCKS_CLUSTER, self._api_key,
+                                           service=pyu.getenv('POLYGON_SERVICE'),
                                            process_message=self._process_message,
                                            on_close=self._on_close,
                                            on_error=self._on_error)
