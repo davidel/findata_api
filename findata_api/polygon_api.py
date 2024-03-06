@@ -268,7 +268,7 @@ class Stream:
         if handler is not None:
           handler(_marshal_stream_bar(d))
       elif kind == 'status':
-        status = data.get('status', None)
+        status = d.get('status', None)
         if status == 'auth_success':
           self._set_status('AUTHENTICATED')
         elif status == 'connected':
