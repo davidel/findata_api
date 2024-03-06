@@ -57,15 +57,14 @@ def _map_data_step(data_step):
   return mult, span
 
 
-def _get_config(key, enable_streaming):
+def _get_config(key):
   if key is None:
     key = pyu.getenv('POLYGON_API_KEY')
-  if enable_streaming is None:
-    enable_streaming = pyu.to_bool(pyu.env('POLYGON_STREAMING', False))
+    tas.check_is_not_none(key, msg=f'Polygon API key not specified')
 
-  alog.debug0(f'Polygon API created with: key={key}\tenable_streaming={enable_streaming}')
+  alog.debug0(f'Polygon API created with: key={key}')
 
-  return key, enable_streaming
+  return key
 
 
 def _get_df_from_response(symbol, resp, dtype=None):
@@ -143,6 +142,7 @@ class Stream:
   def __init__(self, api_key):
     self._api_key = api_key
     self._lock = threading.Lock()
+    self._authenticated = threading.Event()
     self._ctx = Stream._make_ctx()
     self._ws_api = polygon.WebSocketClient(polygon.STOCKS_CLUSTER, self._api_key,
                                            process_message=self._process_message,
@@ -244,8 +244,20 @@ class Stream:
         handler = ctx.handlers.get('bars', None)
         if handler is not None:
           handler(_marshal_stream_bar(d))
+      elif kind == 'status':
+        status = data.get('status', '')
+        if status.startswith('auth_'):
+          self._authenticated.set()
+        else:
+          alog.debug0(f'Status Message: {d}')
       else:
         alog.debug0(f'Stream Message: {d}')
+
+  def authenticate(self):
+    if not self._authenticated.is_set():
+      alog.debug0(f'Authenticating to the Polygon streaming service')
+      self._ws_api.authenticate()
+      self._authenticated.wait()
 
   def _register(self, symbols, handlers):
     ctx = self._ctx
@@ -266,17 +278,13 @@ class Stream:
 
 class API(api_base.API):
 
-  def __init__(self, api_key=None, api_rate=None, enable_streaming=None):
+  def __init__(self, api_key=None, api_rate=None):
     super().__init__()
-    self._api_key, self._enable_streaming = _get_config(api_key, enable_streaming)
+    self._api_key = _get_config(api_key)
     self._api = polygon.RESTClient(self._api_key)
     self._api_throttle = throttle.Throttle(
       (5 if api_rate is None else api_rate) / 60.0)
-    if self._enable_streaming:
-      self._stream = Stream(self._api_key)
-      self._stream.start()
-    else:
-      self._stream = None
+    self._stream = None
 
   def __del__(self):
     if self._stream is not None:
@@ -291,13 +299,20 @@ class API(api_base.API):
     return True
 
   def register_stream_handlers(self, symbols, handlers):
-    tas.check_is_not_none(self._stream, msg=f'Streaming is not enabled for the Polygon API')
+    if self._stream is None and symbols:
+      self._stream = Stream(self._api_key)
+      self._stream.start()
+      self._stream.authenticate()
 
     alog.debug1(f'Registering Streaming: handlers={tuple(handlers.keys())}\tsymbols={symbols}')
 
     self._stream.register(symbols, handlers)
 
     alog.debug1(f'Registration done!')
+
+    if self._stream is not None and not symbols:
+      self._stream.stop()
+      self._stream = None
 
   def _get_limited_limit(self, span, step_delta, max_bars):
     limit = pyu.getenv('POLYGON_LIMIT', dtype=int, defval=_DEFAULT_LIMIT)
