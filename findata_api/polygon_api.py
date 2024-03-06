@@ -1,3 +1,4 @@
+import collections
 import datetime
 import os
 import re
@@ -143,7 +144,7 @@ class Stream:
     self._api_key = api_key
     self._lock = threading.Lock()
     self._status_cv = threading.Condition(self._lock)
-    self._status = {'CLOSED'}
+    self._status = collections.defaultdict(list, CLOSED=[])
     self._ctx = Stream._make_ctx()
     self._ws_api = polygon.WebSocketClient(polygon.STOCKS_CLUSTER, self._api_key,
                                            service=pyu.getenv('POLYGON_SERVICE'),
@@ -156,14 +157,17 @@ class Stream:
       if status not in self._status:
         self._status_cv.wait()
 
-      return self._status
+      return self._status.get(status, None)
 
-  def _set_status(self, status, add=True):
+  def _set_status(self, status, meta=None, add=True):
     with self._status_cv:
-      if add:
-        self._status.add(status)
+      if not add:
+        self._status.clear()
+
+      if meta is not None:
+        self._status[status].append(meta)
       else:
-        self._status = status
+        self._status[status] = []
 
       self._status_cv.notify()
 
@@ -277,7 +281,7 @@ class Stream:
         elif status == 'connected':
           self._set_status('CONNECTED')
         elif status == 'error':
-          self._set_status('ERROR')
+          self._set_status('ERROR', meta=d.get('message', None))
       else:
         alog.debug0(f'Stream Message: {d}')
 
