@@ -273,6 +273,8 @@ class Stream:
           self._set_status('AUTHENTICATED')
         elif status == 'connected':
           self._set_status('CONNECTED')
+        elif status == 'error':
+          self._set_status('ERROR')
         else:
           alog.debug0(f'Status Message: {d}')
       else:
