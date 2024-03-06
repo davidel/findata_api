@@ -143,7 +143,7 @@ class Stream:
     self._api_key = api_key
     self._lock = threading.Lock()
     self._status_cv = threading.Condition(self._lock)
-    self._status = 'CLOSED'
+    self._status = {'CLOSED'}
     self._ctx = Stream._make_ctx()
     self._ws_api = polygon.WebSocketClient(polygon.STOCKS_CLUSTER, self._api_key,
                                            process_message=self._process_message,
@@ -152,14 +152,17 @@ class Stream:
 
   def _wait_status(self, status, timeout=None):
     with self._status_cv:
-      if self._status != status:
+      if status not in self._status:
         self._status_cv.wait()
 
       return self._status
 
-  def _set_status(self, status):
+  def _set_status(self, status, add=True):
     with self._status_cv:
-      self._status = status
+      if add:
+        self._status.add(status)
+      else:
+        self._status = status
 
       self._status_cv.notify()
 
@@ -223,6 +226,8 @@ class Stream:
   def stop(self):
     with self._lock:
       self._stop()
+
+    self._set_status({'CLOSED'}, add=False)
 
   def _on_close(self, wsa, status, msg):
     ctx = self._ctx
