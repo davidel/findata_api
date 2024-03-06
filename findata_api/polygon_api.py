@@ -142,12 +142,26 @@ class Stream:
   def __init__(self, api_key):
     self._api_key = api_key
     self._lock = threading.Lock()
-    self._authenticated = threading.Event()
+    self._status_cv = threading.Condition(self._lock)
+    self._status = 'CLOSED'
     self._ctx = Stream._make_ctx()
     self._ws_api = polygon.WebSocketClient(polygon.STOCKS_CLUSTER, self._api_key,
                                            process_message=self._process_message,
                                            on_close=self._on_close,
                                            on_error=self._on_error)
+
+  def _wait_status(self, status, timeout=None):
+    with self._status_cv:
+      if self._status != status:
+        self._status_cv.wait()
+
+      return self._status
+
+  def _set_status(self, status):
+    with self._status_cv:
+      self._status = status
+
+      self._status_cv.notify()
 
   @staticmethod
   def _make_ctx(**kwargs):
@@ -245,9 +259,11 @@ class Stream:
         if handler is not None:
           handler(_marshal_stream_bar(d))
       elif kind == 'status':
-        status = data.get('status', '')
-        if status.startswith('auth_'):
-          self._authenticated.set()
+        status = data.get('status', None)
+        if status == 'auth_success':
+          self._set_status('AUTHENTICATED')
+        elif status == 'connected':
+          self._set_status('CONNECTED')
         else:
           alog.debug0(f'Status Message: {d}')
       else:
@@ -256,8 +272,9 @@ class Stream:
   def authenticate(self):
     if not self._authenticated.is_set():
       alog.debug0(f'Authenticating to the Polygon streaming service')
+      self._wait_status('CONNECTED')
       self._ws_api.authenticate()
-      self._authenticated.wait()
+      self._wait_status('AUTHENTICATED')
 
   def _register(self, symbols, handlers):
     ctx = self._ctx
