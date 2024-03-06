@@ -168,7 +168,7 @@ class Stream:
 
   def _has_status(self, status):
     with self._lock:
-      return status not in self._status
+      return status in self._status
 
   @staticmethod
   def _make_ctx(**kwargs):
