@@ -20,6 +20,7 @@ from . import utils as ut
 
 try:
   import polygon
+  import websocket
 
   MODULE_NAME = 'POLYGON'
 
@@ -130,6 +131,53 @@ def _sublist(symbols, handlers):
   return sub
 
 
+_STOCKS = 'stocks'
+_FOREX = 'forex'
+_CRYPTO = 'crypto'
+
+def _ws_url(cluster, service=None):
+  return f'wss://{service or "socket"}.polygon.io/{cluster}'
+
+
+class WebSocketClient:
+  def __init__(self, url, auth_key, process_message,
+               service=None,
+               on_close=None,
+               on_error=None):
+    self._url = url
+    self._auth_key = auth_key
+
+    self._ws = websocket.WebSocketApp(self._url,
+                                      on_close=on_close,
+                                      on_error=on_error,
+                                      on_message=process_message)
+
+    self._run_thread = None
+
+  def run(self, **kwargs):
+    self._ws.run_forever(**kwargs)
+
+  def run_async(self, **kwargs):
+    self._run_thread = threading.Thread(target=self.run, kwargs=kwargs)
+    self._run_thread.start()
+
+  def close_connection(self):
+    self._ws.close()
+    if self._run_thread:
+      self._run_thread.join()
+
+  def subscribe(self, *params):
+    fparams = ','.join(params)
+    self._ws.send(f'{{"action":"subscribe","params":"{fparams}"}}')
+
+  def unsubscribe(self, *params):
+    fparams = ','.join(params)
+    self._ws.send(f'{{"action":"unsubscribe","params":"{fparams}"}}')
+
+  def authenticate(self):
+    self._ws.send(f'{{"action":"auth","params":"{self._auth_key}"}}')
+
+
 class Stream:
 
   DEFAULT_CTX = dict(
@@ -146,11 +194,12 @@ class Stream:
     self._status_cv = threading.Condition(self._lock)
     self._status = collections.defaultdict(list, CLOSED=[])
     self._ctx = Stream._make_ctx()
-    self._ws_api = polygon.WebSocketClient(polygon.STOCKS_CLUSTER, self._api_key,
-                                           service=pyu.getenv('POLYGON_SERVICE'),
-                                           process_message=self._process_message,
-                                           on_close=self._on_close,
-                                           on_error=self._on_error)
+    self._ws_api = WebSocketClient(_ws_url(_STOCKS, service=pyu.getenv('POLYGON_SERVICE')),
+                                   self._api_key,
+                                   self._process_message,
+                                   service=pyu.getenv('POLYGON_SERVICE'),
+                                   on_close=self._on_close,
+                                   on_error=self._on_error)
 
   def _wait_status(self, status, timeout=None):
     with self._status_cv:
