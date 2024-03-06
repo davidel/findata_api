@@ -146,13 +146,11 @@ class WebSocketClient:
                on_error=None):
     self._url = url
     self._auth_key = auth_key
-
+    self._run_thread = None
     self._ws = websocket.WebSocketApp(self._url,
                                       on_close=on_close,
                                       on_error=on_error,
                                       on_message=process_message)
-
-    self._run_thread = None
 
   def run(self, **kwargs):
     self._ws.run_forever(**kwargs)
