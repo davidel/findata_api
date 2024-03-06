@@ -119,11 +119,11 @@ def _marshal_stream_bar(b):
 def _sublist(symbols, handlers):
   sub = []
   for sym in symbols:
-    if 'trades' in handlers:
+    if handlers.get('trades', None) is not None:
       sub.append(f'T.{sym}')
-    if 'quotes' in handlers:
+    if handlers.get('quotes', None) is not None:
       sub.append(f'Q.{sym}')
-    if 'bars' in handlers:
+    if handlers.get('bars', None) is not None:
       sub.append(f'A.{sym}')
 
   return sub
