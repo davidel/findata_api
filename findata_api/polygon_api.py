@@ -236,7 +236,7 @@ class Stream:
     with self._lock:
       self._stop()
 
-    self._set_status({'CLOSED'}, add=False)
+    self._set_status('CLOSED', add=False)
 
   def _on_close(self, wsa, status, msg):
     ctx = self._ctx
