@@ -206,15 +206,12 @@ class Stream:
 
       return self._status.get(status, None)
 
-  def _set_status(self, status, meta=None, add=True):
+  def _set_status(self, status, msg, append=True):
     with self._status_cv:
-      if not add:
+      if not append:
         self._status.clear()
 
-      if meta is not None:
-        self._status[status].append(meta)
-      else:
-        self._status[status] = []
+      self._status[status].append((pyd.now(), msg))
 
       self._status_cv.notify()
 
@@ -283,7 +280,7 @@ class Stream:
     with self._lock:
       self._stop()
 
-    self._set_status('CLOSED', add=False)
+    self._set_status('CLOSED', 'Connection closed', append=False)
 
   def _on_close(self, wsa, status, msg):
     ctx = self._ctx
@@ -320,17 +317,17 @@ class Stream:
         if handler is not None:
           handler(_marshal_stream_bar(d))
       elif kind == 'status':
-        alog.debug0(f'Status Message: {d}')
+        alog.debug2(f'Status Message: {d}')
 
         status = d.get('status', None)
         if status == 'auth_success':
-          self._set_status('AUTHENTICATED')
+          self._set_status('AUTHENTICATED', d.get('message', ''))
         elif status == 'connected':
-          self._set_status('CONNECTED')
+          self._set_status('CONNECTED', d.get('message', ''))
         elif status == 'error':
-          self._set_status('ERROR', meta=d.get('message', None))
+          self._set_status('ERROR', d.get('message', ''))
       else:
-        alog.debug0(f'Stream Message: {d}')
+        alog.debug1(f'Stream Message: {d}')
 
   def authenticate(self):
     if not self._has_status('AUTHENTICATED'):
