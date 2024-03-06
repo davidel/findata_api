@@ -268,6 +268,8 @@ class Stream:
         if handler is not None:
           handler(_marshal_stream_bar(d))
       elif kind == 'status':
+        alog.debug0(f'Status Message: {d}')
+
         status = d.get('status', None)
         if status == 'auth_success':
           self._set_status('AUTHENTICATED')
@@ -275,8 +277,6 @@ class Stream:
           self._set_status('CONNECTED')
         elif status == 'error':
           self._set_status('ERROR')
-        else:
-          alog.debug0(f'Status Message: {d}')
       else:
         alog.debug0(f'Stream Message: {d}')
 
