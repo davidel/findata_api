@@ -471,6 +471,18 @@ def merge_reshaped_dataframes(dfs):
   return pyp.sorted_index(mdf, 't')
 
 
+def make_bars_dataframe(bars, dtype=None):
+  df = pd.DataFrame(data=bars)
+  if dtype is not None:
+    if not isinstance(dtype, dict):
+      cols = pyp.get_typed_columns(df, pyn.is_numeric, discards={'t'})
+      dtype = {c: dtype for c in cols}
+
+    df = pyp.type_convert_dataframe(df, dtype)
+
+  return df
+
+
 def get_nearest_candel(api, symbols, date):
   candels = dict()
 
