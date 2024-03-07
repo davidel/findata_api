@@ -26,39 +26,40 @@ class MarketTimeFilter:
     self._open_offset = 33250 + open_delta
     self._close_offset = 57600 + close_delta
     self._tz = tz
-    self._day_starts = [0]
-    self._last_ds = 0
+    self._last = (0, False)
+    self._days = [self._last]
 
   def _add_entry(self, t, pos):
     ts = pyd.from_timestamp(t, tz=self._tz)
     dts = ts.replace(hour=0, minute=0, second=0, microsecond=0)
     ds = dts.timestamp()
-    self._day_starts.insert(pos, ds)
+    is_open = ts.weekday() < 5
+    self._days.insert(pos, (ds, is_open))
 
-    return ds
+    return ds, is_open
 
-  def _get_ds(self, t):
+  def _get_entry(self, t):
     # 86400 = Seconds per day.
-    if 0 <= (t - self._last_ds) < 86400:
-      return self._last_ds
+    if 0 <= (t - self._last[0]) < 86400:
+      return self._last
 
-    pos = bisect.bisect_right(self._day_starts, t) - 1
-    ds = self._day_starts[pos]
+    pos = bisect.bisect_right(self._days, t, key=lambda x: x[0]) - 1
+    ds, is_open = self._days[pos]
     if t - ds >= 86400:
-      ds = self._add_entry(t, pos + 1)
-    self._last_ds = ds
+      ds, is_open = self._add_entry(t, pos + 1)
+    self._last = (ds, is_open)
 
-    return ds
+    return ds, is_open
 
   def filter(self, t):
-    ds = self._get_ds(t)
+    ds, is_open = self._get_entry(t)
 
-    return self._open_offset <= (t - ds) <= self._close_offset
+    return is_open and self._open_offset <= (t - ds) <= self._close_offset
 
   def filter2(self, t):
-    ds = self._get_ds(t)
+    ds, is_open = self._get_entry(t)
 
-    return self._open_offset <= (t - ds) <= self._close_offset, ds
+    return is_open and self._open_offset <= (t - ds) <= self._close_offset, ds
 
 
 def market_filter(df, epoch_col, open_delta=0, close_delta=0, tz=None):
