@@ -483,10 +483,10 @@ def make_bars_dataframe(bars, dtype=None):
   return df
 
 
+_FIELDS = ('o', 'h', 'l', 'c', 'v')
+
 def get_nearest_candel(api, symbols, date):
   candels = dict()
-
-  fields = ('o', 'h', 'l', 'c', 'v')
 
   delta = datetime.timedelta(hours=1)
   data_step = '1Min'
@@ -499,14 +499,14 @@ def get_nearest_candel(api, symbols, date):
                         data_step=data_step)
     if df is not None and len(df) > 0:
       for symbol, gdf in df.groupby('symbol'):
-        o, h, l, c, v = [gdf[n] for n in fields]
+        field_values = [gdf[n] for n in _FIELDS]
         times = get_dataframe_index_time(gdf)
         index = gdf.index
         tdists = np.abs(times - date.timestamp())
         for x in np.argsort(tdists):
-          values = [d[index[x]] for d in (o, h, l, c, v)]
+          values = [d[index[x]] for d in field_values]
           if all([z != 0 for z in values]):
-            candels[symbol] = {n: v for n, v in zip(fields, values)}
+            candels[symbol] = {n: v for n, v in zip(_FIELDS, values)}
             break
 
     delta *= 2
