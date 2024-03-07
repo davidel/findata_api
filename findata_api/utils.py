@@ -483,6 +483,33 @@ def make_bars_dataframe(bars, dtype=None):
   return df
 
 
+def create_data(api, start_date, end_date, symbols=None, output_file=None,
+                data_step='1Min', dtype=np.float32):
+  df = api.fetch_data(symbols, start_date, end_date,
+                      data_step=data_step,
+                      dtype=dtype)
+  df = transform_raw_data(df, start_date=start_date, end_date=end_date)
+  if output_file is not None:
+    alog.debug1(f'Saving data to {output_file} ...')
+    pyp.save_dataframe(df, output_file)
+
+  return df
+
+
+def create_split_data(api, start_date, end_date, symbols, data_step='1Min',
+                      dtype=np.float32):
+  df = api.fetch_data(symbols, start_date, end_date,
+                      data_step=data_step,
+                      dtype=dtype)
+
+  dfs = dict()
+  for symbol, sdf in df.groupby(['symbol']):
+    sdf = sdf.reset_index(drop=True)
+    dfs[symbol] = transform_raw_data(sdf, start_date=start_date, end_date=end_date)
+
+  return dfs
+
+
 _FIELDS = ('o', 'h', 'l', 'c', 'v')
 
 def get_nearest_candel(api, symbols, date):
