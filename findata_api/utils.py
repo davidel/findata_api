@@ -33,6 +33,8 @@ class MarketTimeFilter:
     ts = pyd.from_timestamp(t, tz=self._tz)
     dts = ts.replace(hour=0, minute=0, second=0, microsecond=0)
     ds = dts.timestamp()
+    # This is a gross approximation as there are other holidays which will slip
+    # through this Monday-Friday check (weekday 0 is Monday, and 6 is Sunday).
     is_open = ts.weekday() < 5
     self._days.insert(pos, (ds, is_open))
 
