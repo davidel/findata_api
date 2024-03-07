@@ -141,7 +141,6 @@ def _ws_url(cluster, service=None):
 
 class WebSocketClient:
   def __init__(self, url, auth_key, process_message,
-               service=None,
                on_close=None,
                on_error=None):
     self._url = url
@@ -195,7 +194,6 @@ class Stream:
     self._ws_api = WebSocketClient(_ws_url(_STOCKS, service=pyu.getenv('POLYGON_SERVICE')),
                                    self._api_key,
                                    self._process_message,
-                                   service=pyu.getenv('POLYGON_SERVICE'),
                                    on_close=self._on_close,
                                    on_error=self._on_error)
 
