@@ -63,6 +63,7 @@ class StreamDataBase:
       self._try_poll()
     except Exception as e:
       alog.exception(e, exmsg=f'Exception while running poll function: {self._try_poll}')
+
     self._schedule_poll()
 
   def _schedule_poll(self):
