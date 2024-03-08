@@ -76,7 +76,7 @@ def _get_df_from_bars(bars, dtype=None):
     df_rows.append(row)
 
   df = pd.DataFrame(df_rows)
-  if dtype:
+  if dtype is not None:
     for c in pyp.get_df_columns(df, discards={'t', 'symbol'}):
       df[c] = df[c].astype(dtype)
 
@@ -84,7 +84,7 @@ def _get_df_from_bars(bars, dtype=None):
 
 
 def _maybe_date(dstr):
-  return pyd.parse_date(str(dstr)) if dstr else None
+  return pyd.parse_date(str(dstr)) if dstr is not None else None
 
 
 def _marshal_order(o):
