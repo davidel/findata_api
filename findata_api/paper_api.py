@@ -71,9 +71,9 @@ class API(api_base.API):
   def __init__(self, api_key, capital, path):
     super().__init__()
     self._api_key = api_key
+    self._capital = capital
     self._path = path
     self._lock = threading.Lock()
-    self._capital = capital
     self._prices = dict()
     self._orders = dict()
     self._positions = collections.defaultdict(list)
@@ -105,6 +105,7 @@ class API(api_base.API):
                    order_id=self._order_id)
 
     with fow.FileOverwrite(self._state_path(), mode='wb') as sfd:
+      print('DUMPY')
       pickle.dump(state, sfd, protocol=pyu.pickle_proto())
 
   def close(self):
