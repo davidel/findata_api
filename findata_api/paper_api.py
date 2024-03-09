@@ -9,6 +9,7 @@ import pandas as pd
 from py_misc_utils import alog
 from py_misc_utils import assert_checks as tas
 from py_misc_utils import date_utils as pyd
+from py_misc_utils import file_overwrite as fow
 from py_misc_utils import pd_utils as pyp
 from py_misc_utils import utils as pyu
 
@@ -78,34 +79,33 @@ class API(api_base.API):
     self._positions = collections.defaultdict(list)
     self._order_id = 1
 
-    cfg_path = self._config_path()
-    if os.path.isfile(cfg_path):
-      self._load_config(cfg_path)
+    state_path = self._state_path()
+    if os.path.isfile(state_path):
+      self._load_state(state_path)
 
-  def _load_config(self, path):
-    with open(path, mode='rb') as cfd:
-      cfg = pickle.load(cfd)
+  def _load_state(self, path):
+    with open(path, mode='rb') as sfd:
+      state = pickle.load(sfd)
 
-    self._capital = cfg['capital']
-    self._prices = cfg['prices']
-    self._orders = cfg['orders']
-    self._positions = cfg['positions']
-    self._order_id = cfg['order_id']
+    self._capital = state['capital']
+    self._prices = state['prices']
+    self._orders = state['orders']
+    self._positions = state['positions']
+    self._order_id = state['order_id']
 
-  def _config_path(self):
+  def _state_path(self):
     return os.path.join(self._path, self._api_key)
 
-  def save_status(self):
+  def save_state(self):
     with self._lock:
-      cfg = dict(capital=self._capital,
-                 prices=self._prices,
-                 orders=self._orders,
-                 positions=self._positions,
-                 order_id=self._order_id)
+      state = dict(capital=self._capital,
+                   prices=self._prices,
+                   orders=self._orders,
+                   positions=self._positions,
+                   order_id=self._order_id)
 
-    cfg_path = self._config_path()
-    with open(path, mode='wb') as cfd:
-      pickle.dump(cfg, cfd, protocol=pyu.pickle_proto())
+    with fow.FileOverwrite(self._state_path(), mode='wb') as sfd:
+      pickle.dump(state, sfd, protocol=pyu.pickle_proto())
 
   @property
   def name(self):
@@ -140,8 +140,7 @@ class API(api_base.API):
       price = self._prices.get(symbol, None)
       tas.check_is_not_none(price, msg=f'Missing price information for symbol: {symbol}')
 
-      now = pyd.now()
-      order_capital = 0
+      order_capital, now = 0, pyd.now()
       if side == 'buy':
         filled_quantity = min(quantity, int(self._capital / price.price))
 

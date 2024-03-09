@@ -58,7 +58,7 @@ def add_api_options(parser):
 _LOCK = threading.Lock()
 _API_CACHE = dict()
 
-@cleanups.register
+@cleanups.reg
 def _cleanup():
   with _LOCK:
     _API_CACHE.clear()
