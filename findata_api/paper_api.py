@@ -104,8 +104,8 @@ class API(api_base.API):
                    positions=self._positions,
                    order_id=self._order_id)
 
+    print(state)
     with fow.FileOverwrite(self._state_path(), mode='wb') as sfd:
-      print('DUMPY')
       pickle.dump(state, sfd, protocol=pyu.pickle_proto())
 
   def close(self):
