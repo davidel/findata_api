@@ -64,7 +64,7 @@ def _cleanup():
     apis = _API_CACHE.values()
     _API_CACHE.clear()
 
-    for api in _API_CACHE:
+    for api in apis:
       api.close()
 
 

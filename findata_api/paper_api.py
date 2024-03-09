@@ -69,8 +69,6 @@ Position = collections.namedtuple('Position', 'symbol, quantity, price, timestam
 class API(api_base.API):
 
   def __init__(self, api_key, capital, path):
-    alog.debug0(f'Paper API, key={api_key}, capital={capital:.2f}, path={path}')
-
     super().__init__()
     self._api_key = api_key
     self._capital = capital
