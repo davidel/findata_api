@@ -295,17 +295,11 @@ def convert_to_epoch(values, dtype=np.float64):
   values = pyn.to_numpy(values)
   if values.size == 0:
     return np.empty((0,), dtype=dtype)
-  if isinstance(values.dtype, object):
-    if isinstance(values[0], str):
-      values = pd.to_datetime(values)
 
-    # I am not sure if a feature or a bug, but when calling a Pandas Series
-    # to_numpy() it sometimes returns an array of `object` dtype and pd.Timestamp
-    # values, instead of correctly converting the latter to np.datetime64 (like a
-    # pd.Timestamp.to_numpy() would).
-    # We do it here anywhere since we really want np.datetime64.
-    if hasattr(values[0], 'to_numpy'):
-      values = np.array([x.to_numpy() for x in values])
+  if isinstance(values[0], str):
+    values = pd.to_datetime(values)
+  if isinstance(values[0], pd.Timestamp):
+    values = np.array([x.to_numpy() for x in values])
 
   if np.issubdtype(values.dtype, np.datetime64):
     return pyd.np_datetime_to_epoch(values, dtype=dtype)
@@ -530,7 +524,7 @@ def get_nearest_candel(api, symbols, date):
 
     df = api.fetch_data(left_symbols, start_date=date - delta, end_date=date + delta,
                         data_step=data_step)
-    if df is not None and len(df) > 0:
+    if df is not None:
       for symbol, gdf in df.groupby('symbol'):
         field_values = [gdf[n] for n in _FIELDS]
         times = get_dataframe_index_time(gdf)
