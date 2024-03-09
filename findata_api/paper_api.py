@@ -226,7 +226,7 @@ class API(api_base.API):
             (status == 'all' or status == order.status)):
           orders.append(order)
 
-    orders = sorted(order, key=lambda o: o.created)
+    orders = sorted(orders, key=lambda o: o.created)
     if limit is not None:
       orders = orders[-limit:]
 
