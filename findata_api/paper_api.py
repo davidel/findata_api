@@ -20,10 +20,10 @@ from . import utils as ut
 MODULE_NAME = 'PAPER'
 
 def add_api_options(parser):
-    parser.add_argument('--paper_key',
-                        type=str,
-                        default=os.getenv('PAPER_KEY', 'paper-account'),
-                        help='The Paper API key')
+  parser.add_argument('--paper_key',
+                      type=str,
+                      default=os.getenv('PAPER_KEY', 'paper-account'),
+                      help='The Paper API key')
   parser.add_argument('--paper_capital',
                       type=float,
                       default=pyu.getenv('PAPER_CAPITAL', dtype=float, defval=100_000),
