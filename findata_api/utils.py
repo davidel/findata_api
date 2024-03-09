@@ -19,13 +19,13 @@ from py_misc_utils import utils as pyu
 
 class MarketTimeFilter:
 
-  def __init__(self, open_delta=0, close_delta=0, tz=None):
+  def __init__(self, open_delta=0, close_delta=0):
     # Market opens at 09:30 and closes at 16:00 US Eastern time.
     # 33250 = 09:30 seconds from midnight.
     # 57600 = 16:00 seconds from midnight.
     self._open_offset = 33250 + open_delta
     self._close_offset = 57600 + close_delta
-    self._tz = tz
+    self._tz = pyd.us_eastern_timezone()
     self._last = (0, False)
     self._days = [self._last]
 
@@ -64,8 +64,8 @@ class MarketTimeFilter:
     return is_open and self._open_offset <= (t - ds) <= self._close_offset, ds
 
 
-def market_filter(df, epoch_col, open_delta=0, close_delta=0, tz=None):
-  mkf = MarketTimeFilter(open_delta=open_delta, close_delta=close_delta, tz=tz)
+def market_filter(df, epoch_col, open_delta=0, close_delta=0):
+  mkf = MarketTimeFilter(open_delta=open_delta, close_delta=close_delta)
 
   alog.debug0(f'Market-filtering {len(df)} records ...')
 
@@ -79,10 +79,9 @@ def market_filter(df, epoch_col, open_delta=0, close_delta=0, tz=None):
   return mdf
 
 
-def day_split_exec(df, epoch_col, exec_fn, exec_args=None,
-                   open_delta=0, close_delta=0, tz=None, max_gap=None):
-  tz = tz or pyd.us_eastern_timezone()
-  mkf = MarketTimeFilter(open_delta=open_delta, close_delta=close_delta, tz=tz)
+def day_split_exec(df, epoch_col, exec_fn, exec_args=None, open_delta=0,
+                   close_delta=0, max_gap=None):
+  mkf = MarketTimeFilter(open_delta=open_delta, close_delta=close_delta)
 
   splits = collections.defaultdict(lambda: array.array('L'))
   times = pyn.to_numpy(pyp.column_or_index(df, epoch_col))
@@ -102,7 +101,7 @@ def day_split_exec(df, epoch_col, exec_fn, exec_args=None,
     result.append(exec_fn(mdf, **exec_args))
 
   for t, indices in splits.items():
-    alog.debug0(f'Split has {len(indices)} rows at {pyd.from_timestamp(t, tz=tz).isoformat()}')
+    alog.debug0(f'Split has {len(indices)} rows at {pyd.from_timestamp(t).isoformat()}')
 
     if max_gap is None:
       push_result(indices)
