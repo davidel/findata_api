@@ -1,6 +1,9 @@
 
 class API:
 
+  def close(self):
+    pass
+
   def range_supported(self, start_date, end_date, data_step):
     return True
 

@@ -107,6 +107,9 @@ class API(api_base.API):
     with fow.FileOverwrite(self._state_path(), mode='wb') as sfd:
       pickle.dump(state, sfd, protocol=pyu.pickle_proto())
 
+  def close(self):
+    self.save_state()
+
   @property
   def name(self):
     return 'Paper'

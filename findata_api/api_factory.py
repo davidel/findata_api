@@ -61,7 +61,11 @@ _API_CACHE = dict()
 @cleanups.reg
 def _cleanup():
   with _LOCK:
+    apis = _API_CACHE.values()
     _API_CACHE.clear()
+
+    for api in _API_CACHE:
+      api.close()
 
 
 def create_api(name=None, create=False):
