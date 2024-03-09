@@ -20,11 +20,10 @@ from py_misc_utils import utils as pyu
 class MarketTimeFilter:
 
   def __init__(self, open_delta=0, close_delta=0):
-    # Market opens at 09:30 and closes at 16:00 US Eastern time.
-    # 33250 = 09:30 seconds from midnight.
-    # 57600 = 16:00 seconds from midnight.
-    self._open_offset = 33250 + open_delta
-    self._close_offset = 57600 + close_delta
+    mdts = market_day_timestamps()
+
+    self._open_offset = mdts.open + open_delta
+    self._close_offset = mdts.close + close_delta
     self._tz = pyd.us_eastern_timezone()
     self._last = (0, False)
     self._days = [self._last]
@@ -62,6 +61,14 @@ class MarketTimeFilter:
     ds, is_open = self._get_entry(t)
 
     return is_open and self._open_offset <= (t - ds) <= self._close_offset, ds
+
+
+def market_day_timestamps():
+  # Market opens at 09:30 and closes at 16:00 US Eastern time.
+  # 33250 = 09:30 seconds from midnight.
+  # 57600 = 16:00 seconds from midnight.
+
+  return pyu.make_object(open=33250, close=57600)
 
 
 def market_filter(df, epoch_col, open_delta=0, close_delta=0):
