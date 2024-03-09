@@ -298,9 +298,10 @@ def convert_to_epoch(values, dtype=np.float64):
 
   if isinstance(values[0], str):
     values = pd.to_datetime(values)
+  if isinstance(values[0], datetime.datetime):
+    return np.array([x.timestamp() for x in values], dtype=dtype)
   if isinstance(values[0], pd.Timestamp):
     values = np.array([x.to_numpy() for x in values])
-
   if np.issubdtype(values.dtype, np.datetime64):
     return pyd.np_datetime_to_epoch(values, dtype=dtype)
 
