@@ -71,6 +71,14 @@ def market_day_timestamps():
   return pyu.make_object(open=33250, close=57600)
 
 
+def is_market_open(dt):
+  mdts = market_day_timestamps()
+  dtz = dt.astimezone(pyd.us_eastern_timezone())
+  offset = pyd.day_offset(dtz)
+
+  return dtz.weekday() < 5 and offset >= mdts.open and offset < mdts.close
+
+
 def market_filter(df, epoch_col, open_delta=0, close_delta=0):
   mkf = MarketTimeFilter(open_delta=open_delta, close_delta=close_delta)
 
