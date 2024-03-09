@@ -100,5 +100,6 @@ def select_api(start_date, end_date, data_step):
     if api.range_supported(start_date, end_date, data_step):
       return api
 
-  alog.xraise(RuntimeError, f'Unable to select valid API: start={start_date}\tend={end_date}\tstep={data_step}')
+  alog.xraise(RuntimeError, f'Unable to select valid API: start={start_date}\t' \
+              f'end={end_date}\tstep={data_step}')
 

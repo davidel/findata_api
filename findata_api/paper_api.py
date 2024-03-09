@@ -3,7 +3,6 @@ import datetime
 import os
 import pickle
 import threading
-import time
 
 import numpy as np
 import pandas as pd
@@ -113,10 +112,6 @@ class API(api_base.API):
     return 'Paper'
 
   @property
-  def supports_streaming(self):
-    return False
-
-  @property
   def supports_trading(self):
     return True
 
@@ -144,9 +139,6 @@ class API(api_base.API):
     with self._lock:
       price = self._prices.get(symbol, None)
       tas.check_is_not_none(price, msg=f'Missing price information for symbol: {symbol}')
-
-      order_id = self._order_id
-      self._order_id += 1
 
       now = pyd.now()
       order_capital = 0
@@ -194,19 +186,24 @@ class API(api_base.API):
 
       self._capital += order_capital
 
-    status = 'closed' if filled_quantity >= quantity else 'partial'
-    order = Order(id=order_id,
-                  symbol=symbol,
-                  quantity=quantity,
-                  side=side,
-                  type=type,
-                  limit=limit,
-                  stop=stop,
-                  status=status,
-                  created=now,
-                  filled=now,
-                  filled_quantity=filled_quantity,
-                  filled_avg_price=price.price)
+      alog.debug0(f'New capital for "{self._api_key}" is {self._capital:.2f} US$')
+
+      status = 'closed' if filled_quantity >= quantity else 'partial'
+      order = Order(id=self._order_id,
+                    symbol=symbol,
+                    quantity=quantity,
+                    side=side,
+                    type=type,
+                    limit=limit,
+                    stop=stop,
+                    status=status,
+                    created=now,
+                    filled=now,
+                    filled_quantity=filled_quantity,
+                    filled_avg_price=price.price)
+
+      self._orders[order_id] = order
+      self._order_id += 1
 
     return _marshal_order(order)
 
@@ -227,14 +224,18 @@ class API(api_base.API):
       for oid, order in self._orders.items():
         if (order.created > start_date and order.created < end_date and
             (status == 'all' or status == order.status)):
-          orders.append(_marshal_order(order))
+          orders.append(order)
 
-    return orders if limit is None else orders[-limit:]
+    orders = sorted(order, key=lambda o: o.created)
+    if limit is not None:
+      orders = orders[-limit:]
+
+    return [_marshal_order(o) for o in orders]
 
   def cancel_order(self, oid):
     with self._lock:
       order = self._orders.get(oid, None)
-      if order is not None and order.status == {'open', 'partial'}:
+      if order is not None and order.status in {'open', 'partial'}:
         self._orders[oid] = pyu.new_with(order, status='canceled')
 
   def list_positions(self):
@@ -265,10 +266,10 @@ class API(api_base.API):
     for sym, sdf in bars.items():
       times = sdf['t'].to_numpy()
       if times:
-        indices = np.argsort(times)
+        ilast = np.argmax(times)
         close_prices = sdf['c'].to_numpy()
-        prices[sym] = Price(price=float(close_prices[indices[-1]]),
-                            timestamp=times[indices[-1]])
+        prices[sym] = Price(price=float(close_prices[ilast]),
+                            timestamp=times[ilast])
 
     with self._lock:
       for sym, bprice in prices.items():
