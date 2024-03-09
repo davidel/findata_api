@@ -32,9 +32,7 @@ class MarketTimeFilter:
     ts = pyd.from_timestamp(t, tz=self._tz)
     dts = ts.replace(hour=0, minute=0, second=0, microsecond=0)
     ds = dts.timestamp()
-    # This is a gross approximation as there are other holidays which will slip
-    # through this Monday-Friday check (weekday 0 is Monday, and 6 is Sunday).
-    is_open = ts.weekday() < 5
+    is_open = market_open_day(ts)
     self._days.insert(pos, (ds, is_open))
 
     return ds, is_open
@@ -71,12 +69,31 @@ def market_day_timestamps():
   return pyu.make_object(open=33250, close=57600)
 
 
+def market_open_day(dt):
+  # This is a gross approximation as there are other holidays which will slip
+  # through this Monday-Friday check (weekday 0 is Monday, and 6 is Sunday).
+  return dt.weekday() < 5
+
+
 def is_market_open(dt):
   mdts = market_day_timestamps()
   dtz = dt.astimezone(pyd.us_eastern_timezone())
   offset = pyd.day_offset(dtz)
 
-  return dtz.weekday() < 5 and offset >= mdts.open and offset < mdts.close
+  return market_open_day(dtz) and offset >= mdts.open and offset < mdts.close
+
+
+def get_market_hours(dt):
+  tz = pyd.us_eastern_timezone()
+  mdts = market_day_timestamps()
+
+  dtz = dt.astimezone(tz)
+  offset, ddtz = pyd.day_offset(dtz)
+  if market_open_day(dtz) and offset >= mdts.open and offset < mdts.close:
+    day_base = ddtz.timestamp()
+
+    return (pyd.from_timestamp(day_base + mdts.open, tz=tz),
+            pyd.from_timestamp(day_base + mdts.close, tz=tz))
 
 
 def market_filter(df, epoch_col, open_delta=0, close_delta=0):

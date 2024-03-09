@@ -120,16 +120,7 @@ class API(api_base.API):
                              buying_power=self._capital)
 
   def get_market_hours(self, dt):
-    tz = pyd.us_eastern_timezone()
-    mdts = ut.market_day_timestamps()
-
-    dtz = dt.astimezone(tz)
-    offset, ddtz = pyd.day_offset(dtz)
-    if dtz.weekday() < 5 and offset >= mdts.open and offset < mdts.close:
-      day_base = ddtz.timestamp()
-
-      return (pyd.from_timestamp(day_base + mdts.open, tz=tz),
-              pyd.from_timestamp(day_base + mdts.close, tz=tz))
+    return ut.get_market_hours(dt)
 
   def submit_order(self, symbol, quantity, side, type, limit=None, stop=None):
     tas.check_eq(type, 'market', msg=f'Order type not supported: type={type}')
