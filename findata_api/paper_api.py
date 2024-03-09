@@ -162,16 +162,15 @@ class API(api_base.API):
         filled_quantity = 0
         positions = self._positions.get(symbol, [])
 
-        drop, append = [], []
+        changes = []
         for i, p in enumerate(positions):
           qleft = quantity - filled_quantity
           if p.quantity > qleft:
             pos_quantity = qleft
-            drop.append(i)
-            append.append(pyu.new_with(p, quantity=p.quantity - qleft))
+            changes.append((i, pyu.new_with(p, quantity=p.quantity - qleft)))
           else:
             pos_quantity = p.quantity
-            drop.append(i)
+            changes.append((i, None))
 
           alog.debug0(f'Selling {pos_quantity} units of {symbol} bought at ' \
                       f'{p.price:.2f} US$, for {price.price:.2f} US$ ... gain is ' \
@@ -181,12 +180,13 @@ class API(api_base.API):
           if filled_quantity >= quantity:
             break
 
-        drop.reverse()
-        for i in drop:
-          positions.pop(i)
-
-        for p in append:
-          positions.append(p)
+        # Make sure we pop in reverse order to keep indices valid.
+        changes.reverse()
+        for i, np in changes:
+          if np is None:
+            positions.pop(i)
+          else:
+            positions[i] = np
 
         order_capital = filled_quantity * price.price
       else:
@@ -247,4 +247,32 @@ class API(api_base.API):
 
   def fetch_data(self, symbols, start_date, end_date, data_step='5Min', dtype=None):
     pass
+
+  def handle_trade(self, t):
+    with self._lock:
+      price = self._prices.get(t.symbol, None)
+      if price is None or t.timestamp > price.timestamp:
+        self._prices[t.symbol] = Price(price=t.price, timestamp=t.timestamp)
+
+  def handle_bar(self, b):
+    with self._lock:
+      price = self._prices.get(b.symbol, None)
+      if price is None or b.timestamp > price.timestamp:
+        self._prices[b.symbol] = Price(price=b.close, timestamp=b.timestamp)
+
+  def handle_symbars(self, bars):
+    prices = dict()
+    for sym, sdf in bars.items():
+      times = sdf['t'].to_numpy()
+      if times:
+        indices = np.argsort(times)
+        close_prices = sdf['c'].to_numpy()
+        prices[sym] = Price(price=float(close_prices[indices[-1]]),
+                            timestamp=times[indices[-1]])
+
+    with self._lock:
+      for sym, bprice in prices.items():
+        price = self._prices.get(sym, None)
+        if price is None or bprice.timestamp > price.timestamp:
+          self._prices[sym] = bprice
 
