@@ -63,7 +63,7 @@ Price = collections.namedtuple('Price', 'price, timestamp')
 Order = collections.namedtuple(
     'Order',
     'id, symbol, quantity, side, type, limit, stop, status, created, filled, filled_quantity, filled_avg_price')
-Position = collections.namedtuple('Position', 'symbol, quantity, price, timestamp')
+Position = collections.namedtuple('Position', 'symbol, quantity, price, timestamp, order_id')
 
 
 class API(api_base.API):
@@ -141,7 +141,8 @@ class API(api_base.API):
         self._positions[symbol].append(Position(symbol=symbol,
                                                 quantity=filled_quantity,
                                                 price=price.price,
-                                                timestamp=now))
+                                                timestamp=now,
+                                                order_id=self._order_id))
         self._capital -= filled_quantity * price.price
       elif side == 'sell':
         positions = self._positions.get(symbol, [])
@@ -157,8 +158,8 @@ class API(api_base.API):
             changes.append((i, None))
 
           alog.debug0(f'Selling {pos_quantity} units of {symbol} bought at ' \
-                      f'{p.price:.2f} US$, for {price.price:.2f} US$ ... gain is ' \
-                      f'{(price.price - p.price) * pos_quantity:.2f} US$')
+                      f'{p.price:.2f} US$ (order #{p.order_id}), for {price.price:.2f} US$ ' \
+                      f'... gain is {(price.price - p.price) * pos_quantity:.2f} US$')
 
           filled_quantity += pos_quantity
           if filled_quantity >= quantity:
