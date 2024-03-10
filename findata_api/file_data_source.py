@@ -52,7 +52,7 @@ class FileDataSource(sdb.StreamDataBase):
     indices = np.argsort(times)
     stimes = times[indices]
 
-    splits = (pyn.group_splits(stimes, lambda x: x != 0) + 1).append(len(stimes))
+    splits = np.append(pyn.group_splits(stimes, lambda x: x != 0) + 1, len(stimes))
 
     symbols = self._cdata.get('symbol', None)
 
