@@ -192,6 +192,7 @@ class Stream:
       self._conn.run()
     except Exception as e:
       alog.exception(e, exmsg=f'Exception while running the stream thread loop')
+
     alog.info(f'Stream thread exiting run loop')
 
   def stop(self):
@@ -294,8 +295,8 @@ class API(api_base.API):
     return _marshal_order(order)
 
   def _fetch_orders(self, limit=None, status='all', start_date=None, end_date=None):
-    after = start_date.isoformat() if start_date else None
-    until = end_date.isoformat() if end_date else None
+    after = start_date.isoformat() if start_date is not None else None
+    until = end_date.isoformat() if end_date is not None else None
     with self._api_throttle.trigger():
       orders = self._api.list_orders(limit=limit or _FETCH_ORDERS_MAX,
                                      status=status,

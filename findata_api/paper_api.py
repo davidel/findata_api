@@ -134,7 +134,7 @@ class API(api_base.API):
       price = self._prices.get(symbol, None)
       tas.check_is_not_none(price, msg=f'Missing price information for symbol: {symbol}')
 
-      order_capital, now = 0, pyd.now()
+      now = pyd.now()
       if side == 'buy':
         filled_quantity = min(quantity, int(self._capital / price.price))
 
@@ -142,12 +142,11 @@ class API(api_base.API):
                                                 quantity=filled_quantity,
                                                 price=price.price,
                                                 timestamp=now))
-        order_capital = -filled_quantity * price.price
+        self._capital -= filled_quantity * price.price
       elif side == 'sell':
-        filled_quantity = 0
         positions = self._positions.get(symbol, [])
 
-        changes = []
+        filled_quantity, changes = 0, []
         for i, p in enumerate(positions):
           qleft = quantity - filled_quantity
           if p.quantity > qleft:
@@ -173,15 +172,13 @@ class API(api_base.API):
           else:
             positions[i] = np
 
-        order_capital = filled_quantity * price.price
+        self._capital += filled_quantity * price.price
       else:
         alog.xraise(RuntimeError, f'Unknown order side: {side}')
 
-      self._capital += order_capital
-
       alog.debug0(f'New capital for "{self._api_key}" is {self._capital:.2f} US$')
 
-      status = 'closed' if filled_quantity >= quantity else 'partial'
+      status = 'filled' if filled_quantity >= quantity else 'partially_filled'
       order = Order(id=self._order_id,
                     symbol=symbol,
                     quantity=quantity,
@@ -195,7 +192,7 @@ class API(api_base.API):
                     filled_quantity=filled_quantity,
                     filled_avg_price=price.price)
 
-      self._orders[order_id] = order
+      self._orders[self._order_id] = order
       self._order_id += 1
 
     return _marshal_order(order)
@@ -228,7 +225,7 @@ class API(api_base.API):
   def cancel_order(self, oid):
     with self._lock:
       order = self._orders.get(oid, None)
-      if order is not None and order.status in {'open', 'partial'}:
+      if order is not None and order.status in {'new', 'partially_filled'}:
         self._orders[oid] = pyu.new_with(order, status='canceled')
 
   def list_positions(self):
