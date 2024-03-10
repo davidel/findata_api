@@ -1,5 +1,6 @@
 import argparse
 import collections
+import copy
 import importlib
 import os
 import threading
@@ -68,7 +69,18 @@ def _cleanup():
       api.close()
 
 
-def create_api(name=None, create=False):
+def _merged_args(sargs, nargs):
+  if nargs:
+    args = copy.copy(sargs)
+    for k, v in nargs.items():
+      setattr(args, k, v)
+
+    return args
+
+  return sargs
+
+
+def create_api(name=None, create=False, args=None):
   if name is None:
     name = _ARGS.api or next(iter(_APIS.keys()))
   mod = _APIS.get(name, None)
@@ -76,7 +88,7 @@ def create_api(name=None, create=False):
     alog.xraise(RuntimeError, f'Invalid API name: {name}')
 
   if create:
-    api = mod.create_api(_ARGS)
+    api = mod.create_api(_merged_args(_ARGS, args))
   else:
     with _LOCK:
       api = _API_CACHE.get(name, None)
