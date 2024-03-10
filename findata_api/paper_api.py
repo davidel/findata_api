@@ -258,7 +258,10 @@ class API(api_base.API):
       times = sdf['t'].to_numpy()
       if times:
         ilast = np.argmax(times)
-        close_prices = sdf['c'].to_numpy()
+        cdata = sdf.get(f'{sym}.c', None)
+        if cdata is None:
+          cdata = sdf['c']
+        close_prices = cdata.to_numpy()
         prices[sym] = Price(price=float(close_prices[ilast]),
                             timestamp=times[ilast])
 
