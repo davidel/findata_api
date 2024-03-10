@@ -37,11 +37,19 @@ class StreamDataBase:
 
     return started
 
-  def register_bar_fn(self, bar_fn):
+  def register_bar_fn(self, bar_fn, front=False, force=False):
     with self._lock:
-      if bar_fn in self._bar_functions:
-        return False
-      self._bar_functions += tuple([bar_fn])
+      bar_functions = list(self._bar_functions)
+      if bar_fn in bar_functions:
+        if not force:
+          return False
+
+        bar_functions.remove(bar_fn)
+
+      if front:
+        self._bar_functions = tuple([bar_fn] + bar_functions)
+      else:
+        self._bar_functions = tuple(bar_functions + [bar_fn])
 
       return True
 
