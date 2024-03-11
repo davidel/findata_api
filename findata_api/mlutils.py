@@ -30,9 +30,9 @@ def get_training_indices(size, times=None, test_start_date=None, test_end_date=N
     if times is None:
       alog.xraise(RuntimeError, f'Time based test indices selected, but inputs have no time information')
     if isinstance(test_start_date, str):
-      test_start_date = pyd.parse_date(test_start_date, tz=pyd.us_eastern_timezone())
+      test_start_date = pyd.parse_date(test_start_date, tz=pyd.ny_market_timezone())
     if isinstance(test_end_date, str):
-      test_end_date = pyd.parse_date(test_end_date, tz=pyd.us_eastern_timezone())
+      test_end_date = pyd.parse_date(test_end_date, tz=pyd.ny_market_timezone())
     tstart = test_start_date.timestamp()
     tend = test_end_date.timestamp()
 

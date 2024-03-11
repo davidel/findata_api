@@ -268,7 +268,7 @@ class API(api_base.API):
     return _marshal_account(account)
 
   def get_market_hours(self, dt):
-    dtz = dt.astimezone(pyd.us_eastern_timezone())
+    dtz = dt.astimezone(pyd.ny_market_timezone())
     dts = dtz.strftime('%Y-%m-%d')
     with self._api_throttle.trigger():
       calendar = self._api.get_calendar(start=dts, end=dts)

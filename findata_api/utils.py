@@ -23,7 +23,7 @@ class MarketTimeTracker:
     self._mdts = market_day_timestamps()
     self._open_offset = self._mdts.open + open_delta
     self._close_offset = self._mdts.close + close_delta
-    self._tz = pyd.us_eastern_timezone()
+    self._tz = pyd.ny_market_timezone()
     self._last = (0, False)
     self._days = [self._last]
 
@@ -113,14 +113,14 @@ def market_open_day(dt):
 
 def is_market_open(dt):
   mdts = market_day_timestamps()
-  dtz = dt.astimezone(pyd.us_eastern_timezone())
+  dtz = dt.astimezone(pyd.ny_market_timezone())
   offset = pyd.day_offset(dtz)
 
   return market_open_day(dtz) and offset >= mdts.open and offset < mdts.close
 
 
 def get_market_hours(dt):
-  tz = pyd.us_eastern_timezone()
+  tz = pyd.ny_market_timezone()
   mdts = market_day_timestamps()
 
   dtz = dt.astimezone(tz)
