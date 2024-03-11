@@ -20,6 +20,16 @@ class OrderTracker:
     self._pending = threading.Condition(self._lock)
     self._orders = dict()
 
+  def clear(self):
+    with self._lock:
+      pending_orders = list(self._orders.items())
+      self._orders.clear()
+      self._pending.notify_all()
+
+    for order_id, pending_order in pending_orders:
+      alog.debug0(f'Abandoning tracking order #{order_id}')
+      self._scheduler.cancel(pending_order.event)
+
   def _is_completed(self, order):
     return order.status == 'filled'
 
@@ -28,9 +38,10 @@ class OrderTracker:
     completed_order = None
     with self._lock:
       if self._is_completed(order):
-        completed_order = self._orders.pop(order_id)
-        self._pending.notify_all()
-      else:
+        completed_order = self._orders.pop(order_id, None)
+        if completed_order is not None:
+          self._pending.notify_all()
+      elif order_id in self._orders:
         event = self._scheduler.enter(self._refresh_time, self._track_order,
                                       argument=(order_id,))
         self._orders[order_id] = pyu.new_with(self._orders[order_id],
