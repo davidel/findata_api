@@ -40,6 +40,7 @@ class FileDataSource(sdb.StreamDataBase):
     super().__init__(scheduler=scheduler)
     self._term = threading.Condition()
     self._next_ts = None
+    self._completed = False
     self._cdata = _load_dataframe(path, dtype)
 
   def start(self):
@@ -47,10 +48,12 @@ class FileDataSource(sdb.StreamDataBase):
 
   def stop(self):
     with self._term:
-      if self._next_ts is not None:
+      if not self._completed:
         self._term.wait()
 
-    self._stop()
+    if self._stop() == 1:
+      self._next_ts = None
+      self._completed = False
 
   def _next_poll_time(self):
     # Only return one schedule time, as all the file will be fed from the
@@ -102,6 +105,6 @@ class FileDataSource(sdb.StreamDataBase):
       self._run_bar_functions(dfs)
 
     with self._term:
-      self._next_ts = None
+      self._completed = True
       self._term.notify_all()
 
