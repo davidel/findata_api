@@ -20,10 +20,9 @@ from py_misc_utils import utils as pyu
 class MarketTimeTracker:
 
   def __init__(self, open_delta=0, close_delta=0):
-    mdts = market_day_timestamps()
-
-    self._open_offset = mdts.open + open_delta
-    self._close_offset = mdts.close + close_delta
+    self._mdts = market_day_timestamps()
+    self._open_offset = self._mdts.open + open_delta
+    self._close_offset = self._mdts.close + close_delta
     self._tz = pyd.us_eastern_timezone()
     self._last = (0, False)
     self._days = [self._last]
@@ -59,6 +58,37 @@ class MarketTimeTracker:
     ds, is_open = self._get_entry(t)
 
     return is_open and self._open_offset <= (t - ds) <= self._close_offset, ds
+
+  def elapsed(self, t0, t1):
+    if t0 > t1:
+      t0, t1 = t1, t0
+      sign = -1
+    else:
+      sign = 1
+
+    ds0, is_open0 = self._get_entry(t0)
+    ds1, is_open1 = self._get_entry(t1)
+    if ds0 == ds1:
+      return sign * (t1 - t0)
+
+    if is_open0:
+      elapsed = self._mdts.close - np.clip(t0 - ds0, self._mdts.open, self._mdts.close)
+    else:
+      elapsed = 0
+
+    tc, market_span = t0, self._mdts.close - self._mdts.open
+    while True:
+      tc += 86400
+      ds, is_open = self._get_entry(tc)
+      if ds == ds1:
+        if is_open:
+          elapsed += np.clip(tc - ds, self._mdts.open, self._mdts.close) - self._mdts.open
+
+        break
+
+      elapsed += market_span if is_open else 0
+
+    return sign * elapsed
 
 
 def market_day_timestamps():
