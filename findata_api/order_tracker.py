@@ -74,6 +74,12 @@ class OrderTracker:
   def wait(self, timeout=None):
     exit_time = time.time() + timeout if timeout is not None else None
     with self._lock:
-      while self._orders:
+      flushed = True
+      while self._orders and flushed:
         wait_time = exit_time - time.time() if timeout is not None else None
-        self._pending.wait(timeout=wait_time)
+        if wait_time is None or wait_time > 0:
+          self._pending.wait(timeout=wait_time)
+        else:
+          flushed = False
+
+      return flushed
