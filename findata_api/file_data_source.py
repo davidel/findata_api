@@ -1,4 +1,5 @@
 import collections
+import threading
 import time
 
 import numpy as np
@@ -37,6 +38,7 @@ class FileDataSource(sdb.StreamDataBase):
 
   def __init__(self, path, scheduler=None, dtype=np.float32):
     super().__init__(scheduler=scheduler)
+    self._term = threading.Condition()
     self._next_ts = None
     self._cdata = _load_dataframe(path, dtype)
 
@@ -44,8 +46,11 @@ class FileDataSource(sdb.StreamDataBase):
     self._start()
 
   def stop(self):
+    with self._term:
+      if self._next_ts is not None:
+        self._term.wait()
+
     self._stop()
-    self._next_ts = None
 
   def _next_poll_time(self):
     # Only return one schedule time, as all the file will be fed from the
@@ -95,4 +100,8 @@ class FileDataSource(sdb.StreamDataBase):
         dfs[sym] = pd.DataFrame(data=fdata)
 
       self._run_bar_functions(dfs)
+
+    with self._term:
+      self._next_ts = None
+      self._term.notify_all()
 
