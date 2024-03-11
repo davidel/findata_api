@@ -17,7 +17,7 @@ from py_misc_utils import pd_utils as pyp
 from py_misc_utils import utils as pyu
 
 
-class MarketTimeFilter:
+class MarketTimeTracker:
 
   def __init__(self, open_delta=0, close_delta=0):
     mdts = market_day_timestamps()
@@ -97,7 +97,7 @@ def get_market_hours(dt):
 
 
 def market_filter(df, epoch_col, open_delta=0, close_delta=0):
-  mkf = MarketTimeFilter(open_delta=open_delta, close_delta=close_delta)
+  mkf = MarketTimeTracker(open_delta=open_delta, close_delta=close_delta)
 
   alog.debug0(f'Market-filtering {len(df)} records ...')
 
@@ -113,7 +113,7 @@ def market_filter(df, epoch_col, open_delta=0, close_delta=0):
 
 def day_split_exec(df, epoch_col, exec_fn, exec_args=None, open_delta=0,
                    close_delta=0, max_gap=None):
-  mkf = MarketTimeFilter(open_delta=open_delta, close_delta=close_delta)
+  mkf = MarketTimeTracker(open_delta=open_delta, close_delta=close_delta)
 
   splits = collections.defaultdict(lambda: array.array('L'))
   times = pyn.to_numpy(pyp.column_or_index(df, epoch_col))
