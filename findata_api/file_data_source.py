@@ -15,14 +15,22 @@ from . import utils as ut
 
 
 def _load_dataframe(path, dtype):
-  df = pyp.load_dataframe(path, dtype=dtype)
+  df = pyp.load_dataframe(path)
 
   if df.index.name == 't':
     df = df.reset_index()
   else:
     tas.check('t' in df, msg=f'File source must have a timestamp column named "t"')
 
-  return {c: df[c].to_numpy() for c in df.columns}
+  cdata = dict()
+  for c in df.columns:
+    data = df[c].to_numpy()
+    if c != 't':
+      data = data.astype(dtype)
+
+    cdata[c] = data
+
+  return cdata
 
 
 class FileDataSource(sdb.StreamDataBase):
