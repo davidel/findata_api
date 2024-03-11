@@ -79,7 +79,7 @@ class FileDataSource(sdb.StreamDataBase):
 
       base = end
 
-      tsplit = times[tindices[0]] if tindices else None
+      tsplit = times[tindices[0]] if tindices.size > 0 else None
 
       dfs = dict()
       for sym, fdata in sym_data.items():
