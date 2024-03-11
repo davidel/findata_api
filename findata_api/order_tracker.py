@@ -83,3 +83,13 @@ class OrderTracker:
           flushed = False
 
       return flushed
+
+  def pending(self):
+    with self._lock:
+      return tuple(self._orders.keys())
+
+  def pending_orders(self):
+    pending = self.pending()
+
+    return tuple(self._api.get_order(oid) for oid in pending)
+
