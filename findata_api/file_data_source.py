@@ -21,7 +21,7 @@ def _load_dataframe(path, dtype):
   if df.index.name == 't':
     df = df.reset_index()
   else:
-    tas.check('t' in df, msg=f'File source must have a timestamp column named "t"')
+    tas.check('t' in df, msg=f'Data source must have a timestamp column named "t": {path}')
 
   cdata = dict()
   for c in df.columns:
@@ -38,9 +38,8 @@ class FileDataSource(sdb.StreamDataBase):
 
   def __init__(self, path, scheduler=None, dtype=np.float32):
     super().__init__(scheduler=scheduler)
-    self._term = threading.Condition()
+    self._term = threading.Event()
     self._next_ts = None
-    self._completed = False
     self._cdata = _load_dataframe(path, dtype)
 
   def start(self):
@@ -48,12 +47,11 @@ class FileDataSource(sdb.StreamDataBase):
 
   def stop(self):
     if self._stop() == 1:
-      with self._term:
-        if not self._completed:
-          self._term.wait()
+      alog.debug0(f'Waiting for file data source to complete')
+      self._term.wait()
 
       self._next_ts = None
-      self._completed = False
+      self._term.clear()
 
   def _next_poll_time(self):
     # Only return one schedule time, as all the file will be fed from the
@@ -104,7 +102,5 @@ class FileDataSource(sdb.StreamDataBase):
 
       self._run_bar_functions(dfs)
 
-    with self._term:
-      self._completed = True
-      self._term.notify_all()
+    self._term.set()
 
