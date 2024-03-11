@@ -84,6 +84,7 @@ class FileDataSource(sdb.StreamDataBase):
       dfs = dict()
       for sym, fdata in sym_data.items():
         fdata['t'] = [tsplit] * len(tindices)
+        print(fdata)
         dfs[sym] = pd.DataFrame(data=fdata)
 
       self._run_bar_functions(dfs)
