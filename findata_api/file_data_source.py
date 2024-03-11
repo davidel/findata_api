@@ -25,7 +25,7 @@ def _load_dataframe(path, dtype):
   cdata = dict()
   for c in df.columns:
     data = df[c].to_numpy()
-    if c != 't':
+    if c != 't' and pyn.is_numeric(data.dtype):
       data = data.astype(dtype)
 
     cdata[c] = data
