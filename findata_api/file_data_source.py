@@ -47,11 +47,11 @@ class FileDataSource(sdb.StreamDataBase):
     self._start()
 
   def stop(self):
-    with self._term:
-      if not self._completed:
-        self._term.wait()
-
     if self._stop() == 1:
+      with self._term:
+        if not self._completed:
+          self._term.wait()
+
       self._next_ts = None
       self._completed = False
 
