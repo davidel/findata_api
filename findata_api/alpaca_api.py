@@ -281,7 +281,7 @@ class API(api_base.API):
 
       return market_open, market_close
 
-  def submit_order(self, symbol, quantity, side, type, limit=None, stop=None):
+  def submit_order(self, symbol, quantity, side, type='market', limit=None, stop=None):
     with self._api_throttle.trigger():
       order = self._api.submit_order(symbol, qty=quantity, side=side, type=type,
                                      limit_price=limit, stop_price=stop)

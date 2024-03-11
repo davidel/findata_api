@@ -125,7 +125,7 @@ class API(api_base.API):
   def get_market_hours(self, dt):
     return ut.get_market_hours(dt)
 
-  def submit_order(self, symbol, quantity, side, type, limit=None, stop=None):
+  def submit_order(self, symbol, quantity, side, type='market', limit=None, stop=None):
     tas.check_eq(type, 'market', msg=f'Order type not supported: type={type}')
     tas.check_is_none(limit, msg=f'Limit orders not supported: limit={limit}')
     tas.check_is_none(stop, msg=f'Stop orders not supported: stop={stop}')
@@ -179,7 +179,9 @@ class API(api_base.API):
 
       alog.debug0(f'New capital for "{self._api_key}" is {self._capital:.2f} US$')
 
-      status = 'filled' if filled_quantity >= quantity else 'partially_filled'
+      # We mark the paper order as filled even though there have actually been a
+      # partial fill, since with the paper API there is no progressive filling
+      # capability.
       order = Order(id=self._order_id,
                     symbol=symbol,
                     quantity=quantity,
@@ -187,7 +189,7 @@ class API(api_base.API):
                     type=type,
                     limit=limit,
                     stop=stop,
-                    status=status,
+                    status='filled',
                     created=now,
                     filled=now,
                     filled_quantity=filled_quantity,
