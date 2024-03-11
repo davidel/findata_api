@@ -61,7 +61,7 @@ class FileDataSource(sdb.StreamDataBase):
 
       return self._next_ts
 
-  def _try_poll(self):
+  def _feed_data(self):
     times = self._cdata['t']
     indices = np.argsort(times)
     stimes = times[indices]
@@ -102,5 +102,9 @@ class FileDataSource(sdb.StreamDataBase):
 
       self._run_bar_functions(dfs)
 
-    self._term.set()
+  def _try_poll(self):
+    try:
+      self._feed_data()
+    finally:
+      self._term.set()
 
