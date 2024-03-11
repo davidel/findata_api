@@ -57,17 +57,10 @@ class FileDataSource(sdb.StreamDataBase):
 
   def _try_poll(self):
     times = self._cdata['t']
-
-    print('TIMES', times)
-
     indices = np.argsort(times)
     stimes = times[indices]
 
-    print('STIMES', stimes)
-
     splits = np.append(pyn.group_splits(stimes, lambda x: x != 0) + 1, len(stimes))
-
-    print('SPLITS', splits)
 
     symbols = self._cdata.get('symbol', None)
 
@@ -75,8 +68,6 @@ class FileDataSource(sdb.StreamDataBase):
     for st in splits:
       end = st
       tindices = indices[base: end]
-
-      print('TINDICES', tindices)
 
       sym_data = collections.defaultdict(lambda: collections.defaultdict(list))
 
@@ -100,8 +91,7 @@ class FileDataSource(sdb.StreamDataBase):
 
       dfs = dict()
       for sym, fdata in sym_data.items():
-        fdata['t'] = [tsplit] * len(tindices)
-        print(fdata)
+        fdata['t'] = [tsplit] * len(pyu.seqfirst(fdata.values()))
         dfs[sym] = pd.DataFrame(data=fdata)
 
       self._run_bar_functions(dfs)
