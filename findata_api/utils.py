@@ -69,7 +69,7 @@ class MarketTimeTracker:
     ds0, is_open0 = self._get_entry(t0)
     ds1, is_open1 = self._get_entry(t1)
     if ds0 == ds1:
-      return sign * (t1 - t0)
+      return sign * (t1 - t0) if is_open0 else 0
 
     if is_open0:
       elapsed = self._mdts.close - np.clip(t0 - ds0, self._mdts.open, self._mdts.close)
