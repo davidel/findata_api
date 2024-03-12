@@ -249,8 +249,11 @@ class API(api_base.API):
       self._order_id += 1
 
       if filled_quantity < quantity:
+        print(f'FILLER {filled_quantity} / {quantity}')
         self._scheduler.enter(self._fill_delay, self._try_fill_order,
                               ref=self._schedref, argument=(order.id,))
+
+    print(order)
 
     return _marshal_order(order)
 
