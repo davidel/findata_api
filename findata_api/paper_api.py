@@ -133,7 +133,7 @@ class API(api_base.API):
     return ut.get_market_hours(dt)
 
   # Requires lock!
-  def _try_fill(self, symbol, quantity, side, type, limit, stop):
+  def _try_fill(self, order_id, symbol, quantity, side, type, limit, stop):
     price = self._prices.get(symbol, None)
     tas.check_is_not_none(price, msg=f'Missing price information for symbol: {symbol}')
 
@@ -145,7 +145,7 @@ class API(api_base.API):
                                                 quantity=filled_quantity,
                                                 price=price.price,
                                                 timestamp=pyd.now(),
-                                                order_id=self._order_id))
+                                                order_id=order_id))
         self._capital -= filled_quantity * price.price
     elif side == 'sell':
       positions = self._positions.get(symbol, [])
@@ -194,7 +194,8 @@ class API(api_base.API):
     with self._lock:
       order = self._orders.get(order_id, None)
       if order is not None and order.status != 'filled':
-        filled_quantity, price = self._try_fill(order.symbol,
+        filled_quantity, price = self._try_fill(order.id,
+                                                order.symbol,
                                                 self._fill_quantity(order.quantity,
                                                                     order.filled_quantity),
                                                 order.side,
@@ -219,7 +220,8 @@ class API(api_base.API):
     tas.check_is_none(stop, msg=f'Stop orders not supported: stop={stop}')
 
     with self._lock:
-      filled_quantity, price = self._try_fill(symbol,
+      filled_quantity, price = self._try_fill(self._order_id,
+                                              symbol,
                                               self._fill_quantity(quantity, 0),
                                               side,
                                               type,
