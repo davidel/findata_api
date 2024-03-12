@@ -92,8 +92,7 @@ class TimeGen:
       self.time = max(self.time, current_time)
       if self.wait_time is not None and self.time >= self.wait_time:
         self.wait_time = None
-
-      self.cond.notify_all()
+        self.cond.notify_all()
 
 
 class API(api_base.API):
