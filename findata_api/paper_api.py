@@ -87,12 +87,11 @@ class TimeGen:
 
     self.cond.wait()
 
-    self.wait_time = None
-
   def set_time(self, current_time):
     with self.lock:
       self.time = max(self.time, current_time)
       if self.wait_time is not None and self.time >= self.wait_time:
+        self.wait_time = None
         self.cond.notify_all()
 
 
