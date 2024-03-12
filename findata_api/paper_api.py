@@ -1,5 +1,6 @@
 import collections
 import datetime
+import heapq
 import os
 import pickle
 import threading
@@ -67,32 +68,45 @@ Order = collections.namedtuple(
 Position = collections.namedtuple('Position', 'symbol, quantity, price, timestamp, order_id')
 
 
+class Wait:
+
+  def __init__(self, wakeup_time, cond):
+    self.wakeup_time = wakeup_time
+    self.cond = cond
+
+  def __lt__(self, other):
+    return self.wakeup_time < other.wakeup_time
+
+
 class TimeGen:
 
   def __init__(self):
-    self.lock = threading.Lock()
-    self.cond = threading.Condition(lock=self.lock)
-    self.time = 0
-    self.wait_time = None
+    self._lock = threading.Lock()
+    self._time = 0
+    self._waits = []
 
   def now(self):
-    return self.time
+    return self._time
 
-  def wait(self, timeout=None):
-    # This is called with lock/cond acquired. The wait() below releases and
-    # reacquires the lock when entering/existing the wait.
+  def wait(self, cond, timeout=None):
     if timeout is not None:
-      wait_time = self.time + timeout
-      self.wait_time = min(wait_time, self.wait_time or wait_time)
+      with self._lock:
+        wakeup_time = self._time + timeout
+        heapq.heappush(self._waits, Wait(wakeup_time, cond))
 
-    self.cond.wait()
+    cond.wait()
 
   def set_time(self, current_time):
-    with self.lock:
-      self.time = max(self.time, current_time)
-      if self.wait_time is not None and self.time >= self.wait_time:
-        self.wait_time = None
-        self.cond.notify_all()
+    wakes = []
+    with self._lock:
+      self._time = max(self._time, current_time)
+
+      while self._waits and self._time >= self._waits[0].wakeup_time:
+        wakes.append(heapq.heappop(self._waits))
+
+    for wait in wakes:
+      with wait.cond:
+        wait.cond.notify_all()
 
 
 class API(api_base.API):
