@@ -85,18 +85,18 @@ class TimeGen:
       wait_time = self.time + timeout
       self.wait_time = min(wait_time, self.wait_time or wait_time)
 
-    print(f'ENTER {self.wait_time}')
-
     self.cond.wait()
 
-    print(f'EXIT {self.wait_time}')
-
   def set_time(self, current_time):
+    print(f'SET ENT {current_time}')
+
     with self.lock:
       self.time = max(self.time, current_time)
       if self.wait_time is not None and self.time >= self.wait_time:
         self.wait_time = None
         self.cond.notify_all()
+
+    print(f'SET XXX {current_time}')
 
 
 class API(api_base.API):
