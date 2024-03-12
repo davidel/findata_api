@@ -191,6 +191,8 @@ class API(api_base.API):
     return min(qleft, qpct)
 
   def _try_fill_order(self, order_id):
+    print(f'TRY {order_id}')
+
     with self._lock:
       order = self._orders.get(order_id, None)
       if order is not None and order.status != 'filled':
@@ -208,6 +210,8 @@ class API(api_base.API):
                                               filled_quantity=current_fill,
                                               filled=pyd.now(),
                                               status=status)
+
+        print(f'CURR {current_fill} / {order.quantity}')
 
         if current_fill < order.quantity:
           self._scheduler.enter(self._fill_delay, self._try_fill_order,
