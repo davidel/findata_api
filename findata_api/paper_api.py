@@ -194,7 +194,7 @@ class API(api_base.API):
     with self._lock:
       order = self._orders.get(order_id, None)
       if order is not None and order.status != 'filled':
-        filled_quantity, price = self._try_fill(symbol,
+        filled_quantity, price = self._try_fill(order.symbol,
                                                 self._fill_quantity(order.quantity,
                                                                     order.filled_quantity),
                                                 order.side,
