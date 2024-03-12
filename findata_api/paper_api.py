@@ -146,6 +146,10 @@ class API(api_base.API):
     self.save_state()
 
   @property
+  def scheduler(self):
+    return self._scheduler
+
+  @property
   def name(self):
     return 'Paper'
 
