@@ -11,6 +11,7 @@ from py_misc_utils import assert_checks as tas
 from py_misc_utils import date_utils as pyd
 from py_misc_utils import file_overwrite as fow
 from py_misc_utils import pd_utils as pyp
+from py_misc_utils import scheduler as sch
 from py_misc_utils import utils as pyu
 
 from . import api_base
@@ -68,11 +69,16 @@ Position = collections.namedtuple('Position', 'symbol, quantity, price, timestam
 
 class API(api_base.API):
 
-  def __init__(self, api_key, capital, path):
+  def __init__(self, api_key, capital, path, scheduler=None, fill_pct=None,
+               fill_delay=None):
     super().__init__()
     self._api_key = api_key
     self._capital = capital
     self._path = path
+    self._scheduler = scheduler or sch.common_scheduler()
+    self._fill_pct = fill_pct
+    self._fill_delay = fill_delay or 1.0
+    self._schedref = self._scheduler.gen_unique_ref()
     self._lock = threading.Lock()
     self._prices = dict()
     self._orders = dict()
@@ -108,6 +114,7 @@ class API(api_base.API):
       pickle.dump(state, sfd, protocol=pyu.pickle_proto())
 
   def close(self):
+    self._scheduler.ref_cancel(self._schedref)
     self.save_state()
 
   @property
@@ -125,63 +132,102 @@ class API(api_base.API):
   def get_market_hours(self, dt):
     return ut.get_market_hours(dt)
 
+  # Requires lock!
+  def _try_fill(self, symbol, quantity, side, type, limit, stop):
+    price = self._prices.get(symbol, None)
+    tas.check_is_not_none(price, msg=f'Missing price information for symbol: {symbol}')
+
+    if side == 'buy':
+      filled_quantity = min(quantity, int(self._capital / price.price))
+
+      if filled_quantity:
+        self._positions[symbol].append(Position(symbol=symbol,
+                                                quantity=filled_quantity,
+                                                price=price.price,
+                                                timestamp=pyd.now(),
+                                                order_id=self._order_id))
+        self._capital -= filled_quantity * price.price
+    elif side == 'sell':
+      positions = self._positions.get(symbol, [])
+
+      filled_quantity, changes = 0, []
+      for i, p in enumerate(positions):
+        qleft = quantity - filled_quantity
+        if p.quantity > qleft:
+          pos_quantity = qleft
+          changes.append((i, pyu.new_with(p, quantity=p.quantity - qleft)))
+        else:
+          pos_quantity = p.quantity
+          changes.append((i, None))
+
+        alog.debug0(f'Selling {pos_quantity} units of {symbol} bought at ' \
+                    f'{p.price:.2f} US$ (order #{p.order_id}), for {price.price:.2f} US$ ' \
+                    f'... gain is {(price.price - p.price) * pos_quantity:.2f} US$')
+
+        filled_quantity += pos_quantity
+        if filled_quantity >= quantity:
+          break
+
+      # Make sure we pop in reverse order to keep indices valid.
+      changes.reverse()
+      for i, np in changes:
+        if np is None:
+          positions.pop(i)
+        else:
+          positions[i] = np
+
+      self._capital += filled_quantity * price.price
+    else:
+      alog.xraise(RuntimeError, f'Unknown order side: {side}')
+
+    alog.debug0(f'New capital for "{self._api_key}" is {self._capital:.2f} US$')
+
+    return filled_quantity, price
+
+  def _fill_quantity(self, quantity, filled):
+    qleft = quantity - filled
+    qpct = max(1, int(quantity * self._fill_pct)) if self._fill_pct else qleft
+
+    return min(qleft, qpct)
+
+  def _try_fill_order(self, order_id):
+    with self._lock:
+      order = self._orders.get(order_id, None)
+      if order is not None and order.status != 'filled':
+        filled_quantity, price = self._try_fill(symbol,
+                                                self._fill_quantity(order.quantity,
+                                                                    order.filled_quantity),
+                                                order.side,
+                                                order.type,
+                                                order.limit,
+                                                order.stop)
+
+        current_fill = order.filled_quantity + filled_quantity
+        status = 'filled' if current_fill == order.quantity else 'partially_filled'
+        self._orders[order_id] = pyu.new_with(order,
+                                              filled_quantity=current_fill,
+                                              filled=pyd.now(),
+                                              status=status)
+
+        if current_fill < order.quantity:
+          self._scheduler.enter(self._fill_delay, self._try_fill_order,
+                                ref=self._schedref, argument=(order_id,))
+
   def submit_order(self, symbol, quantity, side, type='market', limit=None, stop=None):
     tas.check_eq(type, 'market', msg=f'Order type not supported: type={type}')
     tas.check_is_none(limit, msg=f'Limit orders not supported: limit={limit}')
     tas.check_is_none(stop, msg=f'Stop orders not supported: stop={stop}')
 
     with self._lock:
-      price = self._prices.get(symbol, None)
-      tas.check_is_not_none(price, msg=f'Missing price information for symbol: {symbol}')
+      filled_quantity, price = self._try_fill(symbol,
+                                              self._fill_quantity(quantity, 0),
+                                              side,
+                                              type,
+                                              limit,
+                                              stop)
 
       now = pyd.now()
-      if side == 'buy':
-        filled_quantity = min(quantity, int(self._capital / price.price))
-
-        self._positions[symbol].append(Position(symbol=symbol,
-                                                quantity=filled_quantity,
-                                                price=price.price,
-                                                timestamp=now,
-                                                order_id=self._order_id))
-        self._capital -= filled_quantity * price.price
-      elif side == 'sell':
-        positions = self._positions.get(symbol, [])
-
-        filled_quantity, changes = 0, []
-        for i, p in enumerate(positions):
-          qleft = quantity - filled_quantity
-          if p.quantity > qleft:
-            pos_quantity = qleft
-            changes.append((i, pyu.new_with(p, quantity=p.quantity - qleft)))
-          else:
-            pos_quantity = p.quantity
-            changes.append((i, None))
-
-          alog.debug0(f'Selling {pos_quantity} units of {symbol} bought at ' \
-                      f'{p.price:.2f} US$ (order #{p.order_id}), for {price.price:.2f} US$ ' \
-                      f'... gain is {(price.price - p.price) * pos_quantity:.2f} US$')
-
-          filled_quantity += pos_quantity
-          if filled_quantity >= quantity:
-            break
-
-        # Make sure we pop in reverse order to keep indices valid.
-        changes.reverse()
-        for i, np in changes:
-          if np is None:
-            positions.pop(i)
-          else:
-            positions[i] = np
-
-        self._capital += filled_quantity * price.price
-      else:
-        alog.xraise(RuntimeError, f'Unknown order side: {side}')
-
-      alog.debug0(f'New capital for "{self._api_key}" is {self._capital:.2f} US$')
-
-      # We mark the paper order as filled even though there have actually been a
-      # partial fill, since with the paper API there is no progressive filling
-      # capability.
+      status = 'filled' if filled_quantity == quantity else 'partially_filled'
       order = Order(id=self._order_id,
                     symbol=symbol,
                     quantity=quantity,
@@ -189,7 +235,7 @@ class API(api_base.API):
                     type=type,
                     limit=limit,
                     stop=stop,
-                    status='filled',
+                    status=status,
                     created=now,
                     filled=now,
                     filled_quantity=filled_quantity,
@@ -198,7 +244,14 @@ class API(api_base.API):
       self._orders[self._order_id] = order
       self._order_id += 1
 
+      if filled_quantity < quantity:
+        self._scheduler.enter(self._fill_delay, self._try_fill_order,
+                              ref=self._schedref, argument=(order.id,))
+
     return _marshal_order(order)
+
+  def _try_fill_order(self, order_id):
+    pass
 
   def get_order(self, oid):
     with self._lock:
