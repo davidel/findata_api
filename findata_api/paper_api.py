@@ -67,15 +67,44 @@ Order = collections.namedtuple(
 Position = collections.namedtuple('Position', 'symbol, quantity, price, timestamp, order_id')
 
 
+class TimeGen:
+
+  def __init__(self):
+    self.lock = threading.Lock()
+    self.cond = threading.Condition(lock=self.lock)
+    self.time = 0
+    self.wait_time = None
+
+  def now(self):
+    return self.time
+
+  def wait(self, timeout=None):
+    # This is called with lock/cond acquired. The wait() below releases and
+    # reacquires the lock when entering/existing the wait.
+    if timeout is not None:
+      wait_time = self.time + timeout
+      self.wait_time = min(wait_time, self.wait_time or wait_time)
+
+    self.cond.wait()
+
+    self.wait_time = None
+
+  def set_time(self, current_time):
+    with self.lock:
+      self.time = max(self.time, current_time)
+      if self.wait_time is not None and self.time >= self.wait_time:
+        self.cond.notify_all()
+
+
 class API(api_base.API):
 
-  def __init__(self, api_key, capital, path, scheduler=None, fill_pct=None,
-               fill_delay=None):
+  def __init__(self, api_key, capital, path, fill_pct=None, fill_delay=None):
     super().__init__()
     self._api_key = api_key
     self._capital = capital
     self._path = path
-    self._scheduler = scheduler or sch.common_scheduler()
+    self._timegen = TimeGen()
+    self._scheduler = sch.Scheduler(timegen=self._timegen, name='Paper API')
     self._fill_pct = fill_pct
     self._fill_delay = fill_delay or 1.0
     self._schedref = self._scheduler.gen_unique_ref()
@@ -84,7 +113,6 @@ class API(api_base.API):
     self._orders = dict()
     self._positions = collections.defaultdict(list)
     self._order_id = 1
-    self._time = 0
 
     state_path = self._state_path()
     if os.path.isfile(state_path):
@@ -134,7 +162,7 @@ class API(api_base.API):
     return ut.get_market_hours(dt)
 
   def _now(self):
-    return pyd.from_timestamp(self._time)
+    return pyd.from_timestamp(self._timegen.now())
 
   # Requires lock!
   def _try_fill(self, order_id, symbol, quantity, side, type, limit, stop):
@@ -303,14 +331,14 @@ class API(api_base.API):
       price = self._prices.get(t.symbol, None)
       if price is None or t.timestamp > price.timestamp:
         self._prices[t.symbol] = Price(price=t.price, timestamp=t.timestamp)
-        self._time = max(self._time, t.timestamp)
+        self._timegen.set_time(t.timestamp)
 
   def handle_bar(self, b):
     with self._lock:
       price = self._prices.get(b.symbol, None)
       if price is None or b.timestamp > price.timestamp:
         self._prices[b.symbol] = Price(price=b.close, timestamp=b.timestamp)
-        self._time = max(self._time, b.timestamp)
+        self._timegen.set_time(b.timestamp)
 
   def handle_symbars(self, bars):
     prices = dict()
@@ -330,4 +358,5 @@ class API(api_base.API):
         price = self._prices.get(sym, None)
         if price is None or bprice.timestamp > price.timestamp:
           self._prices[sym] = bprice
-          self._time = max(self._time, bprice.timestamp)
+          self._timegen.set_time(bprice.timestamp)
+
