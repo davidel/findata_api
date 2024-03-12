@@ -85,7 +85,11 @@ class TimeGen:
       wait_time = self.time + timeout
       self.wait_time = min(wait_time, self.wait_time or wait_time)
 
+    alog.debug0(f'ENTER {self.wait_time}')
+
     self.cond.wait()
+
+    alog.debug0(f'EXIT {self.wait_time}')
 
   def set_time(self, current_time):
     with self.lock:
