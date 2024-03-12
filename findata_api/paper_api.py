@@ -191,7 +191,7 @@ class API(api_base.API):
     return min(qleft, qpct)
 
   def _try_fill_order(self, order_id):
-    print(f'TRY {order_id}', flush=True)
+    alog.warning(f'TRY {order_id}', flush=True)
 
     with self._lock:
       order = self._orders.get(order_id, None)
