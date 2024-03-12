@@ -84,6 +84,7 @@ class API(api_base.API):
     self._orders = dict()
     self._positions = collections.defaultdict(list)
     self._order_id = 1
+    self._time = 0
 
     state_path = self._state_path()
     if os.path.isfile(state_path):
@@ -132,6 +133,9 @@ class API(api_base.API):
   def get_market_hours(self, dt):
     return ut.get_market_hours(dt)
 
+  def _now(self):
+    return pyd.from_timestamp(self._time)
+
   # Requires lock!
   def _try_fill(self, order_id, symbol, quantity, side, type, limit, stop):
     price = self._prices.get(symbol, None)
@@ -144,7 +148,7 @@ class API(api_base.API):
         self._positions[symbol].append(Position(symbol=symbol,
                                                 quantity=filled_quantity,
                                                 price=price.price,
-                                                timestamp=pyd.now(),
+                                                timestamp=self._now(),
                                                 order_id=order_id))
         self._capital -= filled_quantity * price.price
     elif side == 'sell':
@@ -207,7 +211,7 @@ class API(api_base.API):
         status = 'filled' if current_fill == order.quantity else 'partially_filled'
         self._orders[order_id] = pyu.new_with(order,
                                               filled_quantity=current_fill,
-                                              filled=pyd.now(),
+                                              filled=self._now(),
                                               status=status)
 
         if current_fill < order.quantity:
@@ -228,7 +232,7 @@ class API(api_base.API):
                                               limit,
                                               stop)
 
-      now = pyd.now()
+      now = self._now()
       status = 'filled' if filled_quantity == quantity else 'partially_filled'
       order = Order(id=self._order_id,
                     symbol=symbol,
@@ -260,7 +264,7 @@ class API(api_base.API):
 
   def list_orders(self, limit=None, status='all', start_date=None, end_date=None):
     if end_date is None:
-      end_date = pyd.now()
+      end_date = self._now()
     if start_date is None:
       start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
 
@@ -299,12 +303,14 @@ class API(api_base.API):
       price = self._prices.get(t.symbol, None)
       if price is None or t.timestamp > price.timestamp:
         self._prices[t.symbol] = Price(price=t.price, timestamp=t.timestamp)
+        self._time = max(self._time, t.timestamp)
 
   def handle_bar(self, b):
     with self._lock:
       price = self._prices.get(b.symbol, None)
       if price is None or b.timestamp > price.timestamp:
         self._prices[b.symbol] = Price(price=b.close, timestamp=b.timestamp)
+        self._time = max(self._time, b.timestamp)
 
   def handle_symbars(self, bars):
     prices = dict()
@@ -324,4 +330,4 @@ class API(api_base.API):
         price = self._prices.get(sym, None)
         if price is None or bprice.timestamp > price.timestamp:
           self._prices[sym] = bprice
-
+          self._time = max(self._time, bprice.timestamp)
