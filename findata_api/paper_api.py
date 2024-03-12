@@ -191,8 +191,6 @@ class API(api_base.API):
     return min(qleft, qpct)
 
   def _try_fill_order(self, order_id):
-    alog.warning(f'TRY {order_id}', flush=True)
-
     with self._lock:
       order = self._orders.get(order_id, None)
       if order is not None and order.status != 'filled':
@@ -210,8 +208,6 @@ class API(api_base.API):
                                               filled_quantity=current_fill,
                                               filled=pyd.now(),
                                               status=status)
-
-        print(f'CURR {current_fill} / {order.quantity}')
 
         if current_fill < order.quantity:
           self._scheduler.enter(self._fill_delay, self._try_fill_order,
@@ -249,19 +245,10 @@ class API(api_base.API):
       self._order_id += 1
 
       if filled_quantity < quantity:
-        print(f'FILLER {filled_quantity} / {quantity}')
         self._scheduler.enter(self._fill_delay, self._try_fill_order,
                               ref=self._schedref, argument=(order.id,))
 
-        self._scheduler.enter(self._fill_delay, lambda: print(f'AIEEEE'),
-                              ref=self._schedref)
-
-    print(order)
-
     return _marshal_order(order)
-
-  def _try_fill_order(self, order_id):
-    pass
 
   def get_order(self, oid):
     with self._lock:
