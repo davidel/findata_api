@@ -361,10 +361,14 @@ class API(api_base.API):
         prices[sym] = Price(price=float(close_prices[ilast]),
                             timestamp=times[ilast])
 
+    current_time = 0
     with self._lock:
       for sym, bprice in prices.items():
         price = self._prices.get(sym, None)
         if price is None or bprice.timestamp > price.timestamp:
           self._prices[sym] = bprice
-          self._timegen.set_time(bprice.timestamp)
+          current_time = max(bprice.timestamp, current_time)
+
+    if current_time:
+      self._timegen.set_time(current_time)
 
