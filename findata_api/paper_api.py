@@ -96,8 +96,8 @@ class TimeGen:
         wakes.append(heapq.heappop(self._waits))
 
     for wait in wakes:
-      with wait.value as cond:
-        cond.notify_all()
+      with wait.value:
+        wait.value.notify_all()
 
 
 class API(api_base.API):
