@@ -11,6 +11,7 @@ from py_misc_utils import alog
 from py_misc_utils import assert_checks as tas
 from py_misc_utils import date_utils as pyd
 from py_misc_utils import file_overwrite as fow
+from py_misc_utils import key_wrap as pykw
 from py_misc_utils import pd_utils as pyp
 from py_misc_utils import scheduler as sch
 from py_misc_utils import utils as pyu
@@ -68,16 +69,6 @@ Order = collections.namedtuple(
 Position = collections.namedtuple('Position', 'symbol, quantity, price, timestamp, order_id')
 
 
-class Wait:
-
-  def __init__(self, wakeup_time, cond):
-    self.wakeup_time = wakeup_time
-    self.cond = cond
-
-  def __lt__(self, other):
-    return self.wakeup_time < other.wakeup_time
-
-
 class TimeGen:
 
   def __init__(self):
@@ -92,7 +83,7 @@ class TimeGen:
     if timeout is not None:
       with self._lock:
         wakeup_time = self._time + timeout
-        heapq.heappush(self._waits, Wait(wakeup_time, cond))
+        heapq.heappush(self._waits, pykw.KeyWrap(wakeup_time, cond))
 
     cond.wait()
 
@@ -101,12 +92,12 @@ class TimeGen:
     with self._lock:
       self._time = max(self._time, current_time)
 
-      while self._waits and self._time >= self._waits[0].wakeup_time:
+      while self._waits and self._time >= self._waits[0].key:
         wakes.append(heapq.heappop(self._waits))
 
     for wait in wakes:
-      with wait.cond:
-        wait.cond.notify_all()
+      with wait.value:
+        wait.value.notify_all()
 
 
 class API(api_base.API):
