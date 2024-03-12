@@ -253,6 +253,9 @@ class API(api_base.API):
         self._scheduler.enter(self._fill_delay, self._try_fill_order,
                               ref=self._schedref, argument=(order.id,))
 
+        self._scheduler.enter(self._fill_delay, lambda: print(f'AIEEEE'),
+                              ref=self._schedref)
+
     print(order)
 
     return _marshal_order(order)
