@@ -1,6 +1,5 @@
 import collections
 import threading
-import time
 
 from py_misc_utils import alog
 from py_misc_utils import scheduler as sch
@@ -83,13 +82,14 @@ class OrderTracker:
       self._api.cancel_order(order_id)
 
   def wait(self, timeout=None):
-    exit_time = time.time() + timeout if timeout is not None else None
+    timegen = self._scheduler.timegen
+    exit_time = timegen.now() + timeout if timeout is not None else None
     with self._lock:
       flushed = True
       while self._orders and flushed:
-        wait_time = exit_time - time.time() if timeout is not None else None
+        wait_time = exit_time - timegen.now() if timeout is not None else None
         if wait_time is None or wait_time > 0:
-          self._pending.wait(timeout=wait_time)
+          timegen.wait(self._pending, timeout=wait_time)
         else:
           flushed = False
 
