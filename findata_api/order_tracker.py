@@ -33,8 +33,7 @@ class OrderTracker:
     return order.status == 'filled'
 
   def _track_order(self, order_id):
-    order = self._api.get_order(order_id)
-    completed_order = None
+    order, completed_order = self._api.get_order(order_id), None
     with self._lock:
       if self._is_completed(order):
         completed_order = self._orders.pop(order_id, None)
@@ -87,7 +86,7 @@ class OrderTracker:
     with self._lock:
       flushed = True
       while self._orders and flushed:
-        wait_time = exit_time - timegen.now() if timeout is not None else None
+        wait_time = exit_time - timegen.now() if exit_time is not None else None
         if wait_time is None or wait_time > 0:
           timegen.wait(self._pending, timeout=wait_time)
         else:

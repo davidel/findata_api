@@ -71,6 +71,8 @@ Position = collections.namedtuple('Position', 'symbol, quantity, price, timestam
 
 class TimeGen:
 
+  Wait = pykw.key_wrap('Wait', 'wakeup_time', 'cond')
+
   def __init__(self):
     self._lock = threading.Lock()
     self._time = 0
@@ -83,7 +85,7 @@ class TimeGen:
     if timeout is not None:
       with self._lock:
         wakeup_time = self._time + timeout
-        heapq.heappush(self._waits, pykw.KeyWrap(wakeup_time, cond))
+        heapq.heappush(self._waits, self.Wait(wakeup_time, cond))
 
     cond.wait()
 
@@ -92,12 +94,12 @@ class TimeGen:
     with self._lock:
       self._time = max(self._time, current_time)
 
-      while self._waits and self._time >= self._waits[0].key:
+      while self._waits and self._time >= self._waits[0].wakeup_time:
         wakes.append(heapq.heappop(self._waits))
 
     for wait in wakes:
-      with wait.value:
-        wait.value.notify_all()
+      with wait.cond:
+        wait.cond.notify_all()
 
 
 class API(api_base.API):
