@@ -311,7 +311,9 @@ class API(api_base.API):
     with self._lock:
       for oid, order in self._orders.items():
         if (order.created > start_date and order.created < end_date and
-            (status == 'all' or status == order.status)):
+            (status == 'all' or
+             (status == 'open' and order.status in {'new', 'partially_filled'}) or
+             (status == 'closed' and order.status in {'filled', 'canceled'}))):
           orders.append(order)
 
     orders = sorted(orders, key=lambda o: o.created)
