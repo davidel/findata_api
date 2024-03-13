@@ -110,7 +110,8 @@ class API(api_base.API):
     self._capital = capital
     self._path = path
     self._timegen = TimeGen()
-    self._scheduler = sch.Scheduler(timegen=self._timegen, name='Paper API')
+    self._scheduler = sch.Scheduler(timegen=self._timegen,
+                                    executor=sch.common_executor())
     self._fill_pct = fill_pct
     self._fill_delay = fill_delay or 1.0
     self._schedref = self._scheduler.gen_unique_ref()
