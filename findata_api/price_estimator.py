@@ -39,7 +39,7 @@ class Storage:
     self._fields = fields
     names = [f.name for f in fields]
     fmt = ''.join([f.fmt for f in fields])
-    self._symbols = collections.defaultdict(lambda: nar.NamedArray(names, fmt))
+    self._symbols = collections.defaultdict(lambda: nar.NamedArray(names, fmt=fmt))
 
   @property
   def fields(self):

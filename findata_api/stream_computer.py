@@ -36,11 +36,11 @@ class BarStorage:
 
 
 def _trades_array():
-  return nar.NamedArray(_TRADES_FIELDS, _TRADES_FMT)
+  return nar.NamedArray(_TRADES_FIELDS, fmt=_TRADES_FMT)
 
 
 def _quotes_array():
-  return nar.NamedArray(_QUOTES_FIELDS, _QUOTES_FMT)
+  return nar.NamedArray(_QUOTES_FIELDS, fmt=_QUOTES_FMT)
 
 
 def _get_bound_times(start_ts, end_ts):
