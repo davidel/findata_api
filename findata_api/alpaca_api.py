@@ -9,6 +9,7 @@ import pandas as pd
 from py_misc_utils import alog
 from py_misc_utils import assert_checks as tas
 from py_misc_utils import date_utils as pyd
+from py_misc_utils import fin_wrap as pyfw
 from py_misc_utils import pd_utils as pyp
 from py_misc_utils import throttle
 from py_misc_utils import utils as pyu
@@ -165,9 +166,6 @@ class Stream:
     self._stream_thread = threading.Thread(target=self._stream_thread_fn, daemon=True)
     self._stream_thread.start()
 
-  def __del__(self):
-    self.stop()
-
   async def _stream_handler(self, d):
     handlers = self._handlers
 
@@ -197,6 +195,7 @@ class Stream:
 
   def stop(self):
     if not self._stopping:
+      alog.debug0(f'Stopping Alpaca stream')
       self._stopping = True
       asyncio.run_coroutine_threadsafe(self._conn.stop_ws(), self._thread_loop)
       self._stream_thread.join()
@@ -252,14 +251,15 @@ class API(api_base.API):
     if symbols:
       alog.debug1(f'Registering Streaming: handlers={tuple(handlers.keys())}\tsymbols={symbols}')
 
-      self._stream = Stream(self._api_key, self._api_secret,
-                            data_stream_url=self._data_stream_url,
-                            data_feed=self._data_feed)
+      stream = Stream(self._api_key, self._api_secret,
+                      data_stream_url=self._data_stream_url,
+                      data_feed=self._data_feed)
+      pyfw.fin_wrap(self, '_stream', stream, finfn=stream.stop)
       self._stream.register(symbols, handlers)
 
       alog.debug1(f'Registration done!')
     else:
-      self._stream = None
+      pyfw.fin_wrap(self, '_stream', None)
 
   def get_account(self):
     with self._api_throttle.trigger():

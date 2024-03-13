@@ -10,6 +10,7 @@ import pandas as pd
 from py_misc_utils import alog
 from py_misc_utils import assert_checks as tas
 from py_misc_utils import date_utils as pyd
+from py_misc_utils import fin_wrap as pyfw
 from py_misc_utils import pd_utils as pyp
 from py_misc_utils import throttle
 from py_misc_utils import utils as pyu
@@ -361,10 +362,6 @@ class API(api_base.API):
       (5 if api_rate is None else api_rate) / 60.0)
     self._stream = None
 
-  def __del__(self):
-    if self._stream is not None:
-      self._stream.stop()
-
   @property
   def name(self):
     return 'Polygon'
@@ -375,7 +372,8 @@ class API(api_base.API):
 
   def register_stream_handlers(self, symbols, handlers):
     if self._stream is None and symbols:
-      self._stream = Stream(self._api_key)
+      stream = Stream(self._api_key)
+      pyfw.fin_wrap(self, '_stream', stream, finfn=stream.stop)
       self._stream.start()
       self._stream.authenticate()
 
@@ -386,8 +384,7 @@ class API(api_base.API):
     alog.debug1(f'Registration done!')
 
     if self._stream is not None and not symbols:
-      self._stream.stop()
-      self._stream = None
+      pyfw.fin_wrap(self, '_stream', None)
 
   def _get_limited_limit(self, span, step_delta, max_bars):
     limit = pyu.getenv('POLYGON_LIMIT', dtype=int, defval=_DEFAULT_LIMIT)
