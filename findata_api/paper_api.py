@@ -64,8 +64,9 @@ def _marshal_position(p):
 
 Price = collections.namedtuple('Price', 'price, timestamp')
 Order = collections.namedtuple(
-    'Order',
-    'id, symbol, quantity, side, type, limit, stop, status, created, filled, filled_quantity, filled_avg_price')
+  'Order',
+  'id, symbol, quantity, side, type, limit, stop, status, created, filled, ' \
+  'filled_quantity, filled_avg_price')
 Position = collections.namedtuple('Position', 'symbol, quantity, price, timestamp, order_id')
 
 
@@ -247,11 +248,14 @@ class API(api_base.API):
                                                 order.stop)
 
         current_fill = order.filled_quantity + filled_quantity
+        avg_price = (order.filled_avg_price * order.filled_quantity +
+                     price.price * filled_quantity) / current_fill
         status = 'filled' if current_fill == order.quantity else 'partially_filled'
         self._orders[order_id] = pyu.new_with(order,
                                               filled_quantity=current_fill,
                                               filled=self._now(),
-                                              status=status)
+                                              status=status,
+                                              filled_avg_price=avg_price)
 
         if current_fill < order.quantity:
           self._scheduler.enter(self._fill_delay, self._try_fill_order,
