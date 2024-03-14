@@ -247,19 +247,21 @@ class API(api_base.API):
                                                 order.limit,
                                                 order.stop)
 
-        current_fill = order.filled_quantity + filled_quantity
-        avg_price = (order.filled_avg_price * order.filled_quantity +
-                     price.price * filled_quantity) / current_fill
-        status = 'filled' if current_fill == order.quantity else 'partially_filled'
-        self._orders[order_id] = pyu.new_with(order,
-                                              filled_quantity=current_fill,
-                                              filled=self._now(),
-                                              status=status,
-                                              filled_avg_price=avg_price)
-
-        if current_fill < order.quantity:
-          self._scheduler.enter(self._fill_delay, self._try_fill_order,
-                                ref=self._schedref, argument=(order_id,))
+        if filled_quantity:
+          current_fill = order.filled_quantity + filled_quantity
+          avg_price = (order.filled_avg_price * order.filled_quantity +
+                       price.price * filled_quantity) / current_fill
+          status = 'filled' if current_fill == order.quantity else 'partially_filled'
+          self._orders[order_id] = pyu.new_with(order,
+                                                filled_quantity=current_fill,
+                                                filled=self._now(),
+                                                status=status,
+                                                filled_avg_price=avg_price)
+          if current_fill < order.quantity:
+            self._scheduler.enter(self._fill_delay, self._try_fill_order,
+                                  ref=self._schedref, argument=(order_id,))
+        else:
+          self._orders[order_id] = pyu.new_with(order, status='truncated')
 
   def submit_order(self, symbol, quantity, side, type='market', limit=None, stop=None):
     tas.check_eq(type, 'market', msg=f'Order type not supported: type={type}')
@@ -305,6 +307,16 @@ class API(api_base.API):
 
     return _marshal_order(order) if order is not None else None
 
+  def _match_status(self, order, status):
+    if status == 'all':
+      return True
+    if status == 'open':
+      return order.status in {'new', 'partially_filled'}
+    if status == 'closed':
+      return order.status in {'filled', 'canceled', 'truncated'}
+
+    alog.xraise(ValueError, f'Unknown status select status: "{status}"')
+
   def list_orders(self, limit=None, status='all', start_date=None, end_date=None):
     if end_date is None:
       end_date = self._now()
@@ -315,9 +327,7 @@ class API(api_base.API):
     with self._lock:
       for oid, order in self._orders.items():
         if (order.created > start_date and order.created < end_date and
-            (status == 'all' or
-             (status == 'open' and order.status in {'new', 'partially_filled'}) or
-             (status == 'closed' and order.status in {'filled', 'canceled'}))):
+            self._match_status(order, status)):
           orders.append(order)
 
     orders = sorted(orders, key=lambda o: o.created)
