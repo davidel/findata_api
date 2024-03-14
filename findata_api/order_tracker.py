@@ -80,7 +80,21 @@ class OrderTracker:
     else:
       self._api.cancel_order(order_id)
 
-  def wait(self, timeout=None):
+  def wait(self, order_id, timeout=None):
+    timegen = self._scheduler.timegen
+    exit_time = timegen.now() + timeout if timeout is not None else None
+    with self._lock:
+      completed = True
+      while order_id in self._orders:
+        wait_time = exit_time - timegen.now() if exit_time is not None else None
+        if wait_time is None or wait_time > 0:
+          timegen.wait(self._pending, timeout=wait_time)
+        else:
+          completed = False
+
+      return completed
+
+  def wait_all(self, timeout=None):
     timegen = self._scheduler.timegen
     exit_time = timegen.now() + timeout if timeout is not None else None
     with self._lock:
