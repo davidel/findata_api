@@ -117,3 +117,7 @@ class OrderTracker:
 
     return tuple(self._api.get_order(oid) for oid in pending)
 
+  def __len__(self):
+    with self._lock:
+      return len(self._orders)
+
