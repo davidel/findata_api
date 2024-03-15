@@ -19,6 +19,10 @@ class OrderTracker:
     self._pending = threading.Condition(self._lock)
     self._orders = dict()
 
+  @property
+  def api(self):
+    return self._api
+
   def clear(self):
     with self._lock:
       pending_orders = list(self._orders.items())
