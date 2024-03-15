@@ -23,6 +23,10 @@ class OrderTracker:
   def api(self):
     return self._api
 
+  @property
+  def scheduler(self):
+    return self._scheduler
+
   def clear(self):
     with self._lock:
       pending_orders = list(self._orders.items())
