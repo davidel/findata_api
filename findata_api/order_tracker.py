@@ -30,7 +30,7 @@ class OrderTracker:
       self.scheduler.cancel(pending_order.event)
 
   def _is_completed(self, order):
-    return order.status == 'filled'
+    return order.status in {'filled', 'truncated'}
 
   def _track_order(self, order_id):
     order, completed_order = self.api.get_order(order_id), None
