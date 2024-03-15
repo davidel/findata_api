@@ -51,7 +51,7 @@ class OrderTracker:
   def submit(self, completed_fn, *args, **kwargs):
     order = self.api.submit_order(*args, **kwargs)
     if self._is_completed(order):
-      completed_fn(order)
+      self.scheduler.executor.submit(completed_fn, order)
     else:
       with self._lock:
         event = self.scheduler.enter(self._refresh_time, self._track_order,
