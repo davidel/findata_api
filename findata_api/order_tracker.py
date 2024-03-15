@@ -74,7 +74,7 @@ class OrderTracker:
 
       order = self.api.get_order(order_id)
       if self._is_completed(order):
-        canceled_order.completed_fn(order)
+        self.scheduler.executor.submit(canceled_order.completed_fn, order)
       else:
         self.api.cancel_order(order_id)
     else:
