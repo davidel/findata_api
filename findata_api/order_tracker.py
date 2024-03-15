@@ -46,7 +46,7 @@ class OrderTracker:
                                               event=event)
 
     if completed_order is not None:
-      completed_order.completed_fn(order)
+      self.scheduler.executor.submit(completed_order.completed_fn, order)
 
   def submit(self, completed_fn, *args, **kwargs):
     order = self.api.submit_order(*args, **kwargs)
