@@ -36,14 +36,10 @@ def _obj_load(obj, rtype):
 class Storage:
 
   def __init__(self, fields):
-    self._fields = fields
+    self.fields = fields
     names = [f.name for f in fields]
     fmt = ''.join([f.fmt for f in fields])
     self._symbols = collections.defaultdict(lambda: nar.NamedArray(names, fmt=fmt))
-
-  @property
-  def fields(self):
-    return self._fields
 
   def append(self, sym, *args):
     self._symbols[sym].append(*args)

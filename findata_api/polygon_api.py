@@ -355,20 +355,12 @@ class Stream:
 class API(api_base.API):
 
   def __init__(self, api_key=None, api_rate=None):
-    super().__init__()
+    super().__init__(name='Polygon', supports_streaming=True)
     self._api_key = _get_config(api_key)
     self._api = polygon.RESTClient(self._api_key)
     self._api_throttle = throttle.Throttle(
       (5 if api_rate is None else api_rate) / 60.0)
     self._stream = None
-
-  @property
-  def name(self):
-    return 'Polygon'
-
-  @property
-  def supports_streaming(self):
-    return True
 
   def register_stream_handlers(self, symbols, handlers):
     if self._stream is None and symbols:

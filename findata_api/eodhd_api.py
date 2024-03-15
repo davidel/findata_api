@@ -101,14 +101,10 @@ class API(api_base.API):
   # https://eodhd.com/financial-apis/intraday-historical-data-api
 
   def __init__(self, api_key=None, api_rate=None):
-    super().__init__()
+    super().__init__(name='EODHD')
     self._api_key = api_key or pyu.getenv('EODHD_KEY')
     self._api_throttle = throttle.Throttle(
       (5 if api_rate is None else api_rate) / 60.0)
-
-  @property
-  def name(self):
-    return 'EODHD'
 
   def _get_intraday_data(self, symbols, start_date, end_date, data_step='5Min'):
     dfs = []

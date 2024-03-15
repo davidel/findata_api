@@ -68,17 +68,13 @@ class Bar:
   def __init__(self, symbol, data, timestamp=None):
     self._symbol = symbol
     self._data = data
-    self._timestamp = timestamp
-
-  @property
-  def timestamp(self):
-    return self._timestamp
+    self.timestamp = timestamp
 
   def flush(self):
     # If the timestamp is not specified at constructor time, we use the last one.
-    if self._timestamp is None:
+    if self.timestamp is None:
       timestamps = self._data.get_array('timestamps')
-      self._timestamp = np.amax(timestamps)
+      self.timestamp = np.amax(timestamps)
 
     return self
 
@@ -108,7 +104,7 @@ class TradeBar(Bar):
     total_volume = np_volumes.sum()
     avg_price = (np_prices * np_volumes).sum() / total_volume
 
-    return dict(t=self._timestamp,
+    return dict(t=self.timestamp,
                 o=np_prices[indices[0]],
                 h=np_prices.max(),
                 l=np_prices.min(),

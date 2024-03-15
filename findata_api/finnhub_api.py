@@ -54,14 +54,10 @@ class API(api_base.API):
   # https://finnhub.io/docs/api/introduction
 
   def __init__(self, api_key=None, api_rate=None):
-    super().__init__()
+    super().__init__(name='Finnhub')
     self._client = finnhub.Client(api_key=api_key or pyu.getenv('FINNHUB_KEY'))
     self._api_throttle = throttle.Throttle(
       (60 if api_rate is None else api_rate) / 60.0)
-
-  @property
-  def name(self):
-    return 'Finnhub'
 
   def fetch_single(self, symbol, start_epoch, end_epoch, data_step, dtype=None):
     with self._api_throttle.trigger():

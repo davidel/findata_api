@@ -216,12 +216,12 @@ class Stream:
 
 
 
-class API(api_base.API):
+class API(api_base.TradeAPI):
 
   def __init__(self, api_key=None, api_secret=None, api_url=None, api_rate=None,
                symbols_per_step=20, data_stream_url='https://stream.data.alpaca.markets',
                data_feed='sip'):
-    super().__init__()
+    super().__init__(name='Alpaca', supports_streaming=True)
     self._api_key, self._api_secret, self._api_url = _get_config(api_key, api_secret, api_url)
     self._api = alpaca.REST(self._api_key, self._api_secret, self._api_url)
     self._api_throttle = throttle.Throttle(
@@ -230,18 +230,6 @@ class API(api_base.API):
     self._data_stream_url = data_stream_url
     self._data_feed = data_feed
     self._stream = None
-
-  @property
-  def name(self):
-    return 'Alpaca'
-
-  @property
-  def supports_streaming(self):
-    return True
-
-  @property
-  def supports_trading(self):
-    return True
 
   def register_stream_handlers(self, symbols, handlers):
     if self._stream is not None:

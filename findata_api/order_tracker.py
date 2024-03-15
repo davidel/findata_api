@@ -11,21 +11,13 @@ PendingOrder = collections.namedtuple('PendingOrder', 'order_id, completed_fn, e
 
 class OrderTracker:
 
-  def __init__(self, api, scheduler=None, refresh_time=5):
-    self._api = api
-    self._scheduler = scheduler or sch.common_scheduler()
-    self._refresh_time = refresh_time
+  def __init__(self, api, scheduler=None, refresh_time=None):
+    self.api = api
+    self.scheduler = scheduler or sch.common_scheduler()
+    self._refresh_time = refresh_time or pyu.getenv('TRACKER_REFRESH', dtype=int, defval=5)
     self._lock = threading.Lock()
     self._pending = threading.Condition(self._lock)
     self._orders = dict()
-
-  @property
-  def api(self):
-    return self._api
-
-  @property
-  def scheduler(self):
-    return self._scheduler
 
   def clear(self):
     with self._lock:
@@ -35,21 +27,21 @@ class OrderTracker:
 
     for order_id, pending_order in pending_orders:
       alog.debug0(f'Abandoning tracking order #{order_id}')
-      self._scheduler.cancel(pending_order.event)
+      self.scheduler.cancel(pending_order.event)
 
   def _is_completed(self, order):
     return order.status == 'filled'
 
   def _track_order(self, order_id):
-    order, completed_order = self._api.get_order(order_id), None
+    order, completed_order = self.api.get_order(order_id), None
     with self._lock:
       if self._is_completed(order):
         completed_order = self._orders.pop(order_id, None)
         if completed_order is not None:
           self._pending.notify_all()
       elif order_id in self._orders:
-        event = self._scheduler.enter(self._refresh_time, self._track_order,
-                                      argument=(order_id,))
+        event = self.scheduler.enter(self._refresh_time, self._track_order,
+                                     argument=(order_id,))
         self._orders[order_id] = pyu.new_with(self._orders[order_id],
                                               event=event)
 
@@ -57,13 +49,13 @@ class OrderTracker:
       completed_order.completed_fn(order)
 
   def submit(self, completed_fn, *args, **kwargs):
-    order = self._api.submit_order(*args, **kwargs)
+    order = self.api.submit_order(*args, **kwargs)
     if self._is_completed(order):
       completed_fn(order)
     else:
       with self._lock:
-        event = self._scheduler.enter(self._refresh_time, self._track_order,
-                                      argument=(order.id,))
+        event = self.scheduler.enter(self._refresh_time, self._track_order,
+                                     argument=(order.id,))
 
         self._orders[order.id] = PendingOrder(order_id=order.id,
                                               completed_fn=completed_fn,
@@ -78,18 +70,18 @@ class OrderTracker:
         self._pending.notify_all()
 
     if canceled_order is not None:
-      self._scheduler.cancel(canceled_order.event)
+      self.scheduler.cancel(canceled_order.event)
 
-      order = self._api.get_order(order_id)
+      order = self.api.get_order(order_id)
       if self._is_completed(order):
         canceled_order.completed_fn(order)
       else:
-        self._api.cancel_order(order_id)
+        self.api.cancel_order(order_id)
     else:
-      self._api.cancel_order(order_id)
+      self.api.cancel_order(order_id)
 
   def wait(self, order_id, timeout=None):
-    timegen = self._scheduler.timegen
+    timegen = self.scheduler.timegen
     exit_time = timegen.now() + timeout if timeout is not None else None
     with self._lock:
       completed = True
@@ -103,7 +95,7 @@ class OrderTracker:
       return completed
 
   def wait_all(self, timeout=None):
-    timegen = self._scheduler.timegen
+    timegen = self.scheduler.timegen
     exit_time = timegen.now() + timeout if timeout is not None else None
     with self._lock:
       flushed = True
@@ -123,7 +115,7 @@ class OrderTracker:
   def pending_orders(self):
     pending = self.pending()
 
-    return tuple(self._api.get_order(oid) for oid in pending)
+    return tuple(self.api.get_order(oid) for oid in pending)
 
   def __len__(self):
     with self._lock:

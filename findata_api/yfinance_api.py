@@ -53,13 +53,9 @@ class API(api_base.API):
   # https://github.com/ranaroussi/yfinance
 
   def __init__(self, api_rate=None):
-    super().__init__()
+    super().__init__(name='YFinance')
     self._api_throttle = throttle.Throttle(
       (30 if api_rate is None else api_rate) / 60.0)
-
-  @property
-  def name(self):
-    return 'YFinance'
 
   def range_supported(self, start_date, end_date, data_step):
     ds_delta = ut.get_data_step_delta(data_step)

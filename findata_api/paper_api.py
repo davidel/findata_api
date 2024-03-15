@@ -103,19 +103,20 @@ class TimeGen:
         wait.cond.notify_all()
 
 
-class API(api_base.API):
+class API(api_base.TradeAPI):
 
   def __init__(self, api_key, capital, path, fill_pct=None, fill_delay=None):
-    super().__init__()
+    scheduler = sch.Scheduler(timegen=TimeGen(),
+                              executor=sch.common_executor())
+
+    super().__init__(name='Paper', scheduler=scheduler)
     self._api_key = api_key
     self._capital = capital
     self._path = path
-    self._timegen = TimeGen()
-    self._scheduler = sch.Scheduler(timegen=self._timegen,
-                                    executor=sch.common_executor())
+    self.scheduler = scheduler
     self._fill_pct = fill_pct
     self._fill_delay = fill_delay or 1.0
-    self._schedref = self._scheduler.gen_unique_ref()
+    self._schedref = self.scheduler.gen_unique_ref()
     self._lock = threading.Lock()
     self._prices = dict()
     self._orders = dict()
@@ -151,20 +152,8 @@ class API(api_base.API):
       pickle.dump(state, sfd, protocol=pyu.pickle_proto())
 
   def close(self):
-    self._scheduler.ref_cancel(self._schedref)
+    self.scheduler.ref_cancel(self._schedref)
     self.save_state()
-
-  @property
-  def scheduler(self):
-    return self._scheduler
-
-  @property
-  def name(self):
-    return 'Paper'
-
-  @property
-  def supports_trading(self):
-    return True
 
   def get_account(self):
     return api_types.Account(id=self._api_key,
@@ -174,7 +163,7 @@ class API(api_base.API):
     return ut.get_market_hours(dt)
 
   def _now(self):
-    return pyd.from_timestamp(self._timegen.now())
+    return pyd.from_timestamp(self.scheduler.timegen.now())
 
   # Requires lock!
   def _try_fill(self, order_id, symbol, quantity, side, type, limit, stop):
@@ -258,7 +247,7 @@ class API(api_base.API):
                                                 status=status,
                                                 filled_avg_price=avg_price)
           if current_fill < order.quantity:
-            self._scheduler.enter(self._fill_delay, self._try_fill_order,
+            self.scheduler.enter(self._fill_delay, self._try_fill_order,
                                   ref=self._schedref, argument=(order_id,))
         else:
           self._orders[order_id] = pyu.new_with(order, status='truncated')
@@ -296,7 +285,7 @@ class API(api_base.API):
       self._order_id += 1
 
       if filled_quantity < quantity:
-        self._scheduler.enter(self._fill_delay, self._try_fill_order,
+        self.scheduler.enter(self._fill_delay, self._try_fill_order,
                               ref=self._schedref, argument=(order.id,))
 
     return _marshal_order(order)
@@ -358,14 +347,14 @@ class API(api_base.API):
       price = self._prices.get(t.symbol, None)
       if price is None or t.timestamp > price.timestamp:
         self._prices[t.symbol] = Price(price=t.price, timestamp=t.timestamp)
-        self._timegen.set_time(t.timestamp)
+        self.scheduler.timegen.set_time(t.timestamp)
 
   def handle_bar(self, b):
     with self._lock:
       price = self._prices.get(b.symbol, None)
       if price is None or b.timestamp > price.timestamp:
         self._prices[b.symbol] = Price(price=b.close, timestamp=b.timestamp)
-        self._timegen.set_time(b.timestamp)
+        self.scheduler.timegen.set_time(b.timestamp)
 
   def handle_symbars(self, bars):
     prices = dict()
@@ -389,5 +378,5 @@ class API(api_base.API):
           current_time = max(bprice.timestamp, current_time)
 
     if current_time:
-      self._timegen.set_time(current_time)
+      self.scheduler.timegen.set_time(current_time)
 
