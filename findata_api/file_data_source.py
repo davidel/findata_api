@@ -101,6 +101,7 @@ class FileDataSource(sdb.StreamDataBase):
         dfs[sym] = pd.DataFrame(data=fdata)
 
       self._run_bar_functions(dfs)
+      time.sleep(0.25)
 
   def _try_poll(self):
     try:
