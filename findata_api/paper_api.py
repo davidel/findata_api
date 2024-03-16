@@ -226,7 +226,7 @@ class API(api_base.TradeAPI):
   def _try_fill_order(self, order_id):
     with self._lock:
       order = self._orders.get(order_id, None)
-      if order is not None and order.filled_quantity < order.quantity:
+      if order is not None and order.status not in {'filled', 'truncated'}:
         filled_quantity, price = self._try_fill(order_id,
                                                 order.symbol,
                                                 self._fill_quantity(order.quantity,
