@@ -53,7 +53,8 @@ class OrderTracker:
   def _task_completed(self):
     with self._lock:
       self._in_flight -= 1
-      self._in_flight_cv.notify_all()
+      if self._in_flight == 0:
+        self._in_flight_cv.notify_all()
 
   def _run_completed(self, completed_fn, order):
     wfn = _wrap_complete_fn(self, completed_fn, order)
