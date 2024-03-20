@@ -22,6 +22,8 @@ def _wrap_complete_fn(executor, fn, *args, **kwargs):
       if xtor is not None:
         xtor._task_completed()
 
+  return wrapped
+
 
 class OrderTracker:
 
