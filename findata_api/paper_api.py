@@ -105,9 +105,10 @@ class TimeGen:
 
 class API(api_base.TradeAPI):
 
-  def __init__(self, api_key, capital, path, fill_pct=None, fill_delay=None):
-    scheduler = sch.Scheduler(timegen=TimeGen(),
-                              executor=sch.common_executor())
+  def __init__(self, api_key, capital, path, fill_pct=None, fill_delay=None,
+               executor=None):
+    aexecutor = executor if executor is not None else sch.common_executor()
+    scheduler = sch.Scheduler(timegen=TimeGen(), executor=aexecutor)
 
     super().__init__(name='Paper', scheduler=scheduler)
     self._api_key = api_key
