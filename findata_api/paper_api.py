@@ -10,6 +10,7 @@ import pandas as pd
 from py_misc_utils import alog
 from py_misc_utils import assert_checks as tas
 from py_misc_utils import date_utils as pyd
+from py_misc_utils import executor as pyex
 from py_misc_utils import file_overwrite as fow
 from py_misc_utils import key_wrap as pykw
 from py_misc_utils import pd_utils as pyp
@@ -107,7 +108,7 @@ class API(api_base.TradeAPI):
 
   def __init__(self, api_key, capital, path, fill_pct=None, fill_delay=None,
                executor=None):
-    aexecutor = executor if executor is not None else sch.common_executor()
+    aexecutor = executor if executor is not None else pyex.common_executor()
     scheduler = sch.Scheduler(timegen=TimeGen(), executor=aexecutor)
 
     super().__init__(name='Paper', scheduler=scheduler)
