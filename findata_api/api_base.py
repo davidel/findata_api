@@ -22,4 +22,5 @@ class TradeAPI(API):
     self.tracker = order_tracker.OrderTracker(self,
                                               scheduler=scheduler,
                                               refresh_time=refresh_time)
+    self.scheduler = self.tracker.scheduler
 

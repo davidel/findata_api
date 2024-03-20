@@ -113,7 +113,6 @@ class API(api_base.TradeAPI):
     self._api_key = api_key
     self._capital = capital
     self._path = path
-    self.scheduler = scheduler
     self._fill_pct = fill_pct
     self._fill_delay = fill_delay or 1.0
     self._schedref = self.scheduler.gen_unique_ref()
