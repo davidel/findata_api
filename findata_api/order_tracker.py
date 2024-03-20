@@ -1,6 +1,5 @@
 import collections
 import threading
-import weakref
 
 from py_misc_utils import abs_timeout as pyat
 from py_misc_utils import alog
@@ -9,20 +8,6 @@ from py_misc_utils import utils as pyu
 
 
 PendingOrder = collections.namedtuple('PendingOrder', 'order_id, completed_fn, event')
-
-
-def _wrap_complete_fn(executor, fn, *args, **kwargs):
-  exref = weakref.ref(executor)
-
-  def wrapped():
-    try:
-      return fn(*args, **kwargs)
-    finally:
-      xtor = exref()
-      if xtor is not None:
-        xtor._task_completed()
-
-  return wrapped
 
 
 class OrderTracker:
@@ -34,8 +19,6 @@ class OrderTracker:
     self._lock = threading.Lock()
     self._pending_cv = threading.Condition(self._lock)
     self._orders = dict()
-    self._in_flight = 0
-    self._in_flight_cv = threading.Condition(self._lock)
 
   def clear(self):
     with self._lock:
@@ -50,21 +33,9 @@ class OrderTracker:
   def _is_completed(self, order):
     return order.status in {'filled', 'truncated'}
 
-  def _task_completed(self):
-    with self._lock:
-      self._in_flight -= 1
-      if self._in_flight == 0:
-        self._in_flight_cv.notify_all()
-
-  def _run_completed(self, completed_fn, order):
-    wfn = _wrap_complete_fn(self, completed_fn, order)
-    self.scheduler.executor.submit(wfn)
-    self._in_flight += 1
-
   def _track_order(self, order_id):
-    order = self.api.get_order(order_id)
+    order, completed_order = self.api.get_order(order_id), None
     with self._lock:
-      completed_order = None
       if self._is_completed(order):
         completed_order = self._orders.pop(order_id, None)
         if completed_order is not None:
@@ -75,15 +46,15 @@ class OrderTracker:
         self._orders[order_id] = pyu.new_with(self._orders[order_id],
                                               event=event)
 
-      if completed_order is not None:
-        self._run_completed(completed_order.completed_fn, order)
+    if completed_order is not None:
+      self.scheduler.executor.submit(completed_order.completed_fn, order)
 
   def submit(self, completed_fn, *args, **kwargs):
     order = self.api.submit_order(*args, **kwargs)
-    with self._lock:
-      if self._is_completed(order):
-        self._run_completed(completed_fn, order)
-      else:
+    if self._is_completed(order):
+      self.scheduler.executor.submit(completed_fn, order)
+    else:
+      with self._lock:
         event = self.scheduler.enter(self._refresh_time, self._track_order,
                                      argument=(order.id,))
 
@@ -146,15 +117,6 @@ class OrderTracker:
     pending = self.pending()
 
     return tuple(self.api.get_order(oid) for oid in pending)
-
-  def wait_in_flight(self, timeout=None):
-    timegen = self.scheduler.timegen
-    atimeo = pyat.AbsTimeout(timeout, timefn=timegen.now)
-    with self._lock:
-      while self._in_flight > 0:
-        timegen.wait(self._in_flight_cv, timeout=atimeo.get())
-
-      return self._in_flight
 
   def __len__(self):
     with self._lock:
