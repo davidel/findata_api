@@ -108,11 +108,13 @@ class TimeGen(pytg.TimeGen):
 class API(api_base.TradeAPI):
 
   def __init__(self, api_key, capital, path, fill_pct=None, fill_delay=None,
-               executor=None):
+               refresh_time=None, executor=None):
     aexecutor = executor if executor is not None else pyex.common_executor()
     scheduler = sch.Scheduler(timegen=TimeGen(), executor=aexecutor)
 
-    super().__init__(name='Paper', scheduler=scheduler)
+    super().__init__(name='Paper',
+                     scheduler=scheduler,
+                     refresh_time=refresh_time)
     self._api_key = api_key
     self._capital = capital
     self._path = path
