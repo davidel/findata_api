@@ -15,6 +15,7 @@ from py_misc_utils import file_overwrite as fow
 from py_misc_utils import key_wrap as pykw
 from py_misc_utils import pd_utils as pyp
 from py_misc_utils import scheduler as sch
+from py_misc_utils import timegen as pytg
 from py_misc_utils import utils as pyu
 
 from . import api_base
@@ -71,7 +72,7 @@ Order = collections.namedtuple(
 Position = collections.namedtuple('Position', 'symbol, quantity, price, timestamp, order_id')
 
 
-class TimeGen:
+class TimeGen(pytg.TimeGen):
 
   Wait = pykw.key_wrap('Wait', 'wakeup_time')
 
