@@ -11,10 +11,10 @@ from py_misc_utils import alog
 from py_misc_utils import assert_checks as tas
 from py_misc_utils import date_utils as pyd
 from py_misc_utils import executor as pyex
-from py_misc_utils import file_overwrite as fow
 from py_misc_utils import key_wrap as pykw
 from py_misc_utils import pd_utils as pyp
 from py_misc_utils import scheduler as sch
+from py_misc_utils import state as pyst
 from py_misc_utils import timegen as pytg
 from py_misc_utils import utils as pyu
 
@@ -107,7 +107,11 @@ class TimeGen(pytg.TimeGen):
 
 class API(api_base.TradeAPI):
 
-  def __init__(self, api_key, capital, path, fill_pct=None, fill_delay=None,
+  ARGS_FIELDS = ('api_key', 'capital')
+  KWARGS_FIELDS = ('fill_pct', 'fill_delay', 'refresh_time')
+  STATE_FIELDS = ('_capital', '_prices', '_orders', '_positions', '_order_id')
+
+  def __init__(self, api_key, capital, fill_pct=None, fill_delay=None,
                refresh_time=None, executor=None):
     aexecutor = executor if executor is not None else pyex.common_executor()
     scheduler = sch.Scheduler(timegen=TimeGen(), executor=aexecutor)
@@ -117,9 +121,9 @@ class API(api_base.TradeAPI):
                      refresh_time=refresh_time)
     self._api_key = api_key
     self._capital = capital
-    self._path = path
     self._fill_pct = fill_pct
     self._fill_delay = fill_delay or 1.0
+    self._refresh_time = refresh_time
     self._schedref = self.scheduler.gen_unique_ref()
     self._lock = threading.Lock()
     self._prices = dict()
@@ -127,34 +131,14 @@ class API(api_base.TradeAPI):
     self._positions = collections.defaultdict(list)
     self._order_id = 1
 
-    state_path = self._state_path()
-    if os.path.isfile(state_path):
-      self._load_state(state_path)
-
-  def _load_state(self, path):
-    with open(path, mode='rb') as sfd:
-      state = pickle.load(sfd)
-
-    pyu.state_override(trader, state,
-                       ('_capital', '_prices', '_orders', '_positions', '_order_id'))
-
-  def _state_path(self):
-    return os.path.join(self._path, self._api_key)
-
-  def save_state(self):
-    with self._lock:
-      state = dict(_capital=self._capital,
-                   _prices=self._prices,
-                   _orders=self._orders,
-                   _positions=self._positions,
-                   _order_id=self._order_id)
-
-    with fow.FileOverwrite(self._state_path(), mode='wb') as sfd:
-      pickle.dump(state, sfd, protocol=pyu.pickle_proto())
-
-  def close(self):
+  def close(self, path=None):
     self.scheduler.ref_cancel(self._schedref)
-    self.save_state()
+    if path is not None:
+      pyst.to_state(self, path)
+
+  @staticmethod
+  def load(path, *args, **kwargs):
+    return pyst.from_state(__class__, path, *args, **kwargs)
 
   def get_account(self):
     return api_types.Account(id=self._api_key,
