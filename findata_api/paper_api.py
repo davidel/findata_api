@@ -135,22 +135,19 @@ class API(api_base.TradeAPI):
     with open(path, mode='rb') as sfd:
       state = pickle.load(sfd)
 
-    self._capital = state['capital']
-    self._prices = state['prices']
-    self._orders = state['orders']
-    self._positions = state['positions']
-    self._order_id = state['order_id']
+    pyu.state_override(trader, state,
+                       ('_capital', '_prices', '_orders', '_positions', '_order_id'))
 
   def _state_path(self):
     return os.path.join(self._path, self._api_key)
 
   def save_state(self):
     with self._lock:
-      state = dict(capital=self._capital,
-                   prices=self._prices,
-                   orders=self._orders,
-                   positions=self._positions,
-                   order_id=self._order_id)
+      state = dict(_capital=self._capital,
+                   _prices=self._prices,
+                   _orders=self._orders,
+                   _positions=self._positions,
+                   _order_id=self._order_id)
 
     with fow.FileOverwrite(self._state_path(), mode='wb') as sfd:
       pickle.dump(state, sfd, protocol=pyu.pickle_proto())
