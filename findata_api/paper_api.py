@@ -147,7 +147,7 @@ class API(api_base.TradeAPI):
   def get_market_hours(self, dt):
     return ut.get_market_hours(dt)
 
-  def _now(self):
+  def now(self):
     return pyd.from_timestamp(self.scheduler.timegen.now())
 
   # Requires lock!
@@ -162,7 +162,7 @@ class API(api_base.TradeAPI):
         self._positions[symbol].append(Position(symbol=symbol,
                                                 quantity=filled_quantity,
                                                 price=price.price,
-                                                timestamp=self._now(),
+                                                timestamp=self.now(),
                                                 order_id=order_id))
         self._capital -= filled_quantity * price.price
     elif side == 'sell':
@@ -228,7 +228,7 @@ class API(api_base.TradeAPI):
           status = 'filled' if current_fill == order.quantity else 'partially_filled'
           self._orders[order_id] = pyu.new_with(order,
                                                 filled_quantity=current_fill,
-                                                filled=self._now(),
+                                                filled=self.now(),
                                                 status=status,
                                                 filled_avg_price=avg_price)
           if current_fill < order.quantity:
@@ -251,7 +251,7 @@ class API(api_base.TradeAPI):
                                               limit,
                                               stop)
 
-      now = self._now()
+      now = self.now()
       status = 'filled' if filled_quantity == quantity else 'partially_filled'
       order = Order(id=self._order_id,
                     symbol=symbol,
@@ -293,7 +293,7 @@ class API(api_base.TradeAPI):
 
   def list_orders(self, limit=None, status='all', start_date=None, end_date=None):
     if end_date is None:
-      end_date = self._now()
+      end_date = self.now()
     if start_date is None:
       start_date = end_date.replace(hour=0, minute=0, second=0, microsecond=0)
 
