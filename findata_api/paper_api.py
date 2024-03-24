@@ -113,17 +113,13 @@ class API(api_base.TradeAPI):
 
   def __init__(self, api_key, capital, fill_pct=None, fill_delay=None,
                refresh_time=None, executor=None):
-    aexecutor = executor if executor is not None else pyex.common_executor()
-    scheduler = sch.Scheduler(timegen=TimeGen(), executor=aexecutor)
+    executor = executor if executor is not None else pyex.common_executor()
+    fill_delay = fill_delay or 1.0
 
     super().__init__(name='Paper',
-                     scheduler=scheduler,
+                     scheduler=sch.Scheduler(timegen=TimeGen(), executor=executor),
                      refresh_time=refresh_time)
-    self._api_key = api_key
-    self._capital = capital
-    self._fill_pct = fill_pct
-    self._fill_delay = fill_delay or 1.0
-    self._refresh_time = refresh_time
+    pyst.store_args(self.__init__, locals())
     self._schedref = self.scheduler.gen_unique_ref()
     self._lock = threading.Lock()
     self._prices = dict()
