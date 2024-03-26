@@ -95,7 +95,7 @@ class FileBroadcast(sth.StreamHandlers):
       ts_data = lfile.cdata[lfile.ts_col]
       times.extend(ts_data)
       fidx.extend(i for _ in range(len(ts_data)))
-      ridx.extend(r for r in range(len(ts_data)))
+      ridx.extend(np.arange(len(ts_data)))
 
     handlers = {
       _TRADES: self._trade_handler,
