@@ -646,3 +646,21 @@ def wait_for_market_open(api):
 
   return market_open, market_close
 
+
+def npdict_dataframe(path, dtype=None, no_convert=()):
+  cdata = pyp.load_dataframe_as_npdict(path, reset_index=True)
+
+  if dtype is not None:
+    conv_data = dict()
+    for c, data in cdata.items():
+      if c not in no_convert and pyn.is_numeric(data.dtype):
+        cdtype = dtype.get(c, None) if isinstance(dtype, dict) else dtype
+        if cdtype is not None:
+          data = data.astype(cdtype)
+
+      conv_data[c] = data
+  else:
+    conv_data = cdata
+
+  return conv_data
+

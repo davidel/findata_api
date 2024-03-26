@@ -1,5 +1,3 @@
-import threading
-
 from . import stream_handlers as sth
 
 

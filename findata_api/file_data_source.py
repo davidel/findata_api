@@ -14,27 +14,8 @@ from . import stream_data_base as sdb
 from . import utils as ut
 
 
-def _load_dataframe(path, dtype):
-  df = pyp.load_dataframe(path)
-
-  if df.index.name == 't':
-    df = df.reset_index()
-  else:
-    tas.check('t' in df, msg=f'Data source must have a timestamp column named "t": {path}')
-
-  cdata = dict()
-  for c in df.columns:
-    data = df[c].to_numpy()
-    if c != 't' and pyn.is_numeric(data.dtype):
-      data = data.astype(dtype)
-
-    cdata[c] = data
-
-  return cdata
-
-
 def _enumerate_symbars(path, dtype):
-  cdata = _load_dataframe(path, dtype)
+  cdata = ut.npdict_dataframe(path, dtype=dtype, no_convert={'t'})
 
   times = cdata['t']
   indices = np.argsort(times)
