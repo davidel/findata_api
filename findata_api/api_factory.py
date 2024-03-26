@@ -38,7 +38,7 @@ def setup_api(args):
 
 def add_api_options(parser):
   parser.add_argument('--api', type=str,
-                      choices=tuple(_APIS.keys()),
+                      choices=_API_NAMES,
                       help='The API to use')
   parser.add_argument('--api_rate', type=float,
                       default=pyu.getenv('API_RATE', dtype=float),
