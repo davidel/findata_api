@@ -94,7 +94,7 @@ class FileBroadcast(sth.StreamHandlers):
     for i, lfile in enumerate(self._files):
       ts_data = lfile.cdata[lfile.ts_col]
       times.extend(ts_data)
-      fidx.extend(i for _ in range(len(ts_data)))
+      fidx.extend(np.full(len(ts_data), i, dtype=np.int64))
       ridx.extend(np.arange(len(ts_data)))
 
     handlers = {
