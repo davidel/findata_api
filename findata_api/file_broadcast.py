@@ -49,14 +49,6 @@ def _load_files(files, dtype):
         break
 
     if ckind is not None:
-      drop = []
-      for c in cdata.keys():
-        if c not in kfields:
-          drop.append(c)
-
-      for c in drop:
-        cdata.pop(c)
-
       loaded_files.append(_LoadedFile(path=path, kind=ckind, cdata=cdata))
 
   return tuple(loaded_files)
