@@ -1,6 +1,5 @@
 import collections
 import threading
-import time
 
 import numpy as np
 import pandas as pd
@@ -57,7 +56,7 @@ class FileDataSource(sdb.StreamDataBase):
     # Only return one schedule time, as all the file will be fed from the
     # _try_poll() API at once.
     if self._next_ts is None:
-      self._next_ts = time.time()
+      self._next_ts = self._scheduler.timegen.now()
 
       return self._next_ts
 
