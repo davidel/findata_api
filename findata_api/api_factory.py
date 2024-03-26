@@ -7,36 +7,28 @@ import threading
 
 from py_misc_utils import alog
 from py_misc_utils import cleanups
+from py_misc_utils import dyn_modules as pydm
 from py_misc_utils import utils as pyu
-
-
-def _get_available_modules():
-  modules = []
-  # To add a new API implement $API + '_api.py' module within this folder.
-  for fname, m in pyu.re_enumerate_files(os.path.dirname(__file__), r'(.*)_api\.py$'):
-    modules.append(m.group(1))
-
-  order = {name: len(modules) - i for i, name in enumerate(os.getenv(
-    'FINDATA_API_ORDER',
-    'finnhub,yfinance,polygon,alpha_vantage,alpaca').split(','))}
-
-  return sorted(modules, key=lambda x: order.get(x, -1), reverse=True)
 
 
 def _detect_apis():
   parent, _ = pyu.split_module_name(__name__)
 
-  apis = collections.OrderedDict()
-  for mod_name in _get_available_modules():
-    mod = importlib.import_module(f'{parent}.{mod_name}_api')
-    mname = getattr(mod, 'MODULE_NAME', None)
-    if mname is not None:
-      apis[mname] = mod
+  apis = pydm.DynLoader(parent, '_api')
+  module_names = apis.module_names()
 
-  return apis
+  order = {name: len(module_names) - i for i, name in enumerate(os.getenv(
+    'FINDATA_API_ORDER',
+    'finnhub,yfinance,polygon,alpha_vantage,alpaca').split(','))}
+
+  ordered_modules = sorted(module_names,
+                           key=lambda x: order.get(x, -1),
+                           reverse=True)
+
+  return apis, tuple(ordered_modules)
 
 
-_APIS = _detect_apis()
+_APIS, _API_NAMES = _detect_apis()
 _ARGS = None
 
 def setup_api(args):
@@ -82,7 +74,7 @@ def _merged_args(sargs, nargs):
 
 def create_api(name=None, create=False, args=None):
   if name is None:
-    name = _ARGS.api or next(iter(_APIS.keys()))
+    name = _ARGS.api or _API_NAMES[0]
   mod = _APIS.get(name, None)
   if mod is None:
     alog.xraise(RuntimeError, f'Invalid API name: {name}')
@@ -103,7 +95,7 @@ def create_api(name=None, create=False, args=None):
 
 def select_api(start_date, end_date, data_step):
   # In order of preference.
-  api_kinds = list(_APIS.keys())
+  api_kinds = list(_API_NAMES)
   # First try with the eventually specified API.
   if _ARGS.api:
     api = create_api(name=_ARGS.api)
