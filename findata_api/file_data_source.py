@@ -33,13 +33,58 @@ def _load_dataframe(path, dtype):
   return cdata
 
 
+def _enumerate_symbars(path, dtype):
+  cdata = _load_dataframe(path, dtype)
+
+  times = cdata['t']
+  indices = np.argsort(times)
+  stimes = times[indices]
+
+  splits = np.append(pyn.group_splits(stimes, lambda x: x != 0) + 1, len(stimes))
+
+  symbols = cdata.get('symbol', None)
+
+  base = 0
+  for st in splits:
+    end = st
+    tindices = indices[base: end]
+
+    sym_data = collections.defaultdict(lambda: collections.defaultdict(list))
+
+    if symbols is not None:
+      for i in tindices:
+        sym = symbols[i]
+        for c, data in cdata.items():
+          if c != 't':
+            fsym, field = ut.split_field(c)
+            sym_data[sym][field].append(data[i])
+    else:
+      for i in tindices:
+        for c, data in cdata.items():
+          if c != 't':
+            sym, field = ut.split_field(c)
+            sym_data[sym][field].append(data[i])
+
+    base = end
+
+    tsplit = times[tindices[0]] if tindices.size > 0 else None
+
+    dfs = dict()
+    for sym, fdata in sym_data.items():
+      fdata['t'] = [tsplit] * len(pyu.seqfirst(fdata.values()))
+      dfs[sym] = pd.DataFrame(data=fdata)
+
+    yield dfs
+
+
 class FileDataSource(sdb.StreamDataBase):
 
   def __init__(self, path, scheduler=None, dtype=np.float32):
     super().__init__(scheduler=scheduler)
+    self._path = path
+    self._dtype = dtype
     self._term = threading.Event()
     self._next_ts = None
-    self._cdata = _load_dataframe(path, dtype)
 
   def start(self):
     self._start()
@@ -61,44 +106,7 @@ class FileDataSource(sdb.StreamDataBase):
       return self._next_ts
 
   def _feed_data(self):
-    times = self._cdata['t']
-    indices = np.argsort(times)
-    stimes = times[indices]
-
-    splits = np.append(pyn.group_splits(stimes, lambda x: x != 0) + 1, len(stimes))
-
-    symbols = self._cdata.get('symbol', None)
-
-    base = 0
-    for st in splits:
-      end = st
-      tindices = indices[base: end]
-
-      sym_data = collections.defaultdict(lambda: collections.defaultdict(list))
-
-      if symbols is not None:
-        for i in tindices:
-          sym = symbols[i]
-          for c, data in self._cdata.items():
-            if c != 't':
-              fsym, field = ut.split_field(c)
-              sym_data[sym][field].append(data[i])
-      else:
-        for i in tindices:
-          for c, data in self._cdata.items():
-            if c != 't':
-              sym, field = ut.split_field(c)
-              sym_data[sym][field].append(data[i])
-
-      base = end
-
-      tsplit = times[tindices[0]] if tindices.size > 0 else None
-
-      dfs = dict()
-      for sym, fdata in sym_data.items():
-        fdata['t'] = [tsplit] * len(pyu.seqfirst(fdata.values()))
-        dfs[sym] = pd.DataFrame(data=fdata)
-
+    for dfs in _enumerate_symbars(self._path, self._dtype):
       self._run_bar_functions(dfs)
 
   def _try_poll(self):
