@@ -1,7 +1,5 @@
 import collections
-import datetime
 import threading
-import time
 
 import numpy as np
 from py_misc_utils import alog
@@ -44,7 +42,7 @@ class StreamDataSource(dsb.DataSourceBase):
     # The 'end_ts' calculation makes sure (since the get_trade_bars() API uses
     # a <end_ts selection constraint) that we do not pull the current bar,
     # which is still partially filled.
-    now = time.time()
+    now = self._scheduler.timegen.now()
     start_ts = now - self._fetch_time_depth
     end_ts = (now // self._step_delta) * self._step_delta
 
