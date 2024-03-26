@@ -75,7 +75,7 @@ def _merged_args(sargs, nargs):
 def create_api(name=None, create=False, args=None):
   if name is None:
     name = _ARGS.api or _API_NAMES[0]
-  mod = _APIS.get(name, None)
+  mod = _APIS.get(name)
   if mod is None:
     alog.xraise(RuntimeError, f'Invalid API name: {name}')
 
