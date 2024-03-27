@@ -132,8 +132,8 @@ class API(api_base.TradeAPI):
       pyst.to_state(self, path)
 
   @staticmethod
-  def load(path, *args, **kwargs):
-    return pyst.from_state(__class__, path, *args, **kwargs)
+  def load(path, **kwargs):
+    return pyst.from_state(__class__, path, **kwargs)
 
   def get_account(self):
     return api_types.Account(id=self._api_key,
