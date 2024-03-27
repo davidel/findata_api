@@ -107,8 +107,7 @@ class TimeGen(pytg.TimeGen):
 
 class API(api_base.TradeAPI):
 
-  ARGS_FIELDS = ('api_key', 'capital')
-  KWARGS_FIELDS = ('fill_pct', 'fill_delay', 'refresh_time')
+  KWARGS_FIELDS = ('api_key', 'capital', 'fill_pct', 'fill_delay', 'refresh_time')
   STATE_FIELDS = ('_capital', '_prices', '_orders', '_positions', '_order_id')
 
   def __init__(self, api_key, capital, fill_pct=None, fill_delay=None,
