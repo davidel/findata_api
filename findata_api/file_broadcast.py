@@ -78,15 +78,6 @@ class FileBroadcast(sth.StreamHandlers):
     with self._lock:
       self._thread = None
 
-  def _trade_handler(self, x):
-    self._run_handlers(self.TRADE, x)
-
-  def _quote_handler(self, x):
-    self._run_handlers(self.QUOTE, x)
-
-  def _bar_handler(self, x):
-    self._run_handlers(self.BAR, x)
-
   def _run(self):
     times = array.array('d')
     fidx = array.array('L')

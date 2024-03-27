@@ -28,12 +28,3 @@ class StreamBroadcast(sth.StreamHandlers):
     if started == 1:
       self._api.register_stream_handlers([], dict())
 
-  def _trade_handler(self, x):
-    self._run_handlers(self.TRADE, x)
-
-  def _quote_handler(self, x):
-    self._run_handlers(self.QUOTE, x)
-
-  def _bar_handler(self, x):
-    self._run_handlers(self.BAR, x)
-
