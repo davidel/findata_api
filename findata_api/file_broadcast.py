@@ -17,7 +17,7 @@ _TRADES = 1
 _QUOTES = 2
 _BARS = 3
 
-_FIELDS_MAP = {
+_NTUPLE_MAP = {
   _TRADES: api_types.StreamTrade,
   _QUOTES: api_types.StreamQuote,
   _BARS: api_types.StreamBar,
@@ -41,7 +41,7 @@ def _load_files(files, dtype):
     cdata = ut.npdict_dataframe(path, dtype=dtype, no_convert={'timestamp'})
 
     cfields, ckind = set(cdata.keys()), None
-    for kind, nt in _FIELDS_MAP.items():
+    for kind, nt in _NTUPLE_MAP.items():
       kfields = set(nt._fields)
       rem_fields = cfields - kfields
       if not rem_fields:
@@ -96,7 +96,7 @@ class FileBroadcast(sth.StreamHandlers):
 
     for i in np.argsort(times):
       lfile = self._files[fidx[i]]
-      nt = _build_ntuple(_FIELDS_MAP[lfile.kind], lfile.cdata, ridx[i])
+      nt = _build_ntuple(_NTUPLE_MAP[lfile.kind], lfile.cdata, ridx[i])
 
       handlers[lfile.kind](nt)
 
