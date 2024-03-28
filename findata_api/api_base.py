@@ -39,7 +39,7 @@ class TradeAPI(API):
 
   def _set_state(self, state):
     scheduler = state.pop('scheduler')
-    refresh_time = pyst.fetch(TradeAPI, state, 'refresh_time')
+    refresh_time = self._load_state(TradeAPI, state, 'refresh_time')
 
     API._set_state(self, state)
     self.tracker = order_tracker.OrderTracker(self,
