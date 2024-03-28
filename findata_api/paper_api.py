@@ -107,9 +107,6 @@ class TimeGen(pytg.TimeGen):
 
 class API(api_base.TradeAPI):
 
-  KWARGS_FIELDS = ('api_key', 'capital', 'fill_pct', 'fill_delay', 'refresh_time')
-  STATE_FIELDS = ('_capital', '_prices', '_orders', '_positions', '_order_id')
-
   def __init__(self, api_key, capital, fill_pct=None, fill_delay=None,
                refresh_time=None, executor=None):
     executor = executor if executor is not None else pyex.common_executor()
@@ -128,6 +125,21 @@ class API(api_base.TradeAPI):
     self._orders = dict()
     self._positions = collections.defaultdict(list)
     self._order_id = 1
+
+  def _get_state(self, state):
+    cstate = api_base.TradeAPI._get_state(self, state)
+    cstate.pop('_lock')
+
+    return cstate
+
+  def _set_state(self, state):
+    executor = state.pop('executor', None)
+    executor = executor if executor is not None else pyex.common_executor()
+
+    state['scheduler'] = sch.Scheduler(timegen=TimeGen(), executor=executor)
+
+    api_base.TradeAPI._set_state(self, state)
+    self._lock = threading.Lock()
 
   def close(self, path=None):
     self.scheduler.ref_cancel(self._schedref)
