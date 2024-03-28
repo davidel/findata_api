@@ -88,9 +88,16 @@ class TimeGen(pytg.TimeGen):
     if timeout is not None:
       with self._lock:
         wakeup_time = self._time + timeout
-        heapq.heappush(self._waits, self.Wait(wakeup_time, cond=cond))
+        wait = self.Wait(wakeup_time, cond=cond, expired=False)
+        heapq.heappush(self._waits, wait)
+
+    else:
+      wait = None
 
     cond.wait()
+
+    with self._lock:
+      return not wait.expired if wait is not None else True
 
   def set_time(self, current_time):
     wakes = []
@@ -98,7 +105,9 @@ class TimeGen(pytg.TimeGen):
       self._time = max(self._time, current_time)
 
       while self._waits and self._time >= self._waits[0].wakeup_time:
-        wakes.append(heapq.heappop(self._waits))
+        wait = heapq.heappop(self._waits)
+        wait.expired = True
+        wakes.append(wait)
 
     for wait in wakes:
       with wait.cond:
