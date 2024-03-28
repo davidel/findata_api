@@ -90,14 +90,16 @@ class TimeGen(pytg.TimeGen):
         wakeup_time = self._time + timeout
         wait = self.Wait(wakeup_time, cond=cond, expired=False)
         heapq.heappush(self._waits, wait)
-
     else:
       wait = None
 
     cond.wait()
 
+    if wait is None:
+      return True
+
     with self._lock:
-      return not wait.expired if wait is not None else True
+      return not wait.expired
 
   def set_time(self, current_time):
     wakes = []
