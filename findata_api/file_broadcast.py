@@ -38,7 +38,10 @@ def _load_files(files, dtype):
 
   for path in files:
     alog.debug0(f'Loading file: {path}')
-    cdata = ut.npdict_dataframe(path, dtype=dtype, no_convert={'timestamp'})
+    cdata = pyp.load_dataframe_as_npdict(path,
+                                         reset_index=True,
+                                         dtype=dtype,
+                                         no_convert={'timestamp'})
 
     cfields, ckind = set(cdata.keys()), None
     for kind, nt in _NTUPLE_MAP.items():

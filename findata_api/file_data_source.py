@@ -15,7 +15,10 @@ from . import utils as ut
 
 
 def _enumerate_symbars(path, dtype):
-  cdata = ut.npdict_dataframe(path, dtype=dtype, no_convert={'t'})
+  cdata = pyp.load_dataframe_as_npdict(path,
+                                       reset_index=True,
+                                       dtype=dtype,
+                                       no_convert={'t'})
 
   times = cdata['t']
   indices = np.argsort(times)
