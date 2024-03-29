@@ -36,17 +36,17 @@ def _enumerate_symbars(path, dtype):
     sym_data = collections.defaultdict(lambda: collections.defaultdict(list))
 
     if symbols is not None:
-      for i in tindices:
-        sym = symbols[i]
-        for c, data in cdata.items():
-          if c != 't':
-            fsym, field = ut.split_field(c)
+      for c, data in cdata.items():
+        if c != 't':
+          fsym, field = ut.split_field(c)
+          for i in tindices:
+            sym = symbols[i]
             sym_data[sym][field].append(data[i])
     else:
-      for i in tindices:
-        for c, data in cdata.items():
-          if c != 't':
-            sym, field = ut.split_field(c)
+      for c, data in cdata.items():
+        if c != 't':
+          sym, field = ut.split_field(c)
+          for i in tindices:
             sym_data[sym][field].append(data[i])
 
     base = end
