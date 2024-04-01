@@ -7,13 +7,23 @@ class StreamHandlers:
   QUOTE = '_quote_handlers'
   BAR = '_bar_handlers'
 
+  HANDLERS = (TRADE, QUOTE, BAR)
+
   def __init__(self):
     self._lock = threading.Lock()
-    for hn in (self.TRADE, self.QUOTE, self.BAR):
-      setattr(self, hn, tuple())
+    for hname in self.HANDLERS:
+      setattr(self, hname, tuple())
 
-  def _run_handlers(self, aname, x):
-    handlers = getattr(self, aname)
+  def get_handlers(self):
+    handlers = dict()
+    with self._lock:
+      for hn in self.HANDLERS:
+        handlers[hn] = getattr(self, hname)
+
+    return handlers
+
+  def _run_handlers(self, hname, x):
+    handlers = getattr(self, hname)
 
     for handler in handlers:
       handler(x)
@@ -27,18 +37,18 @@ class StreamHandlers:
   def _bar_handler(self, x):
     self._run_handlers(self.BAR, x)
 
-  def _add_handler(self, aname, handler):
+  def _add_handler(self, hname, handler):
     with self._lock:
-      handlers = list(getattr(self, aname))
+      handlers = list(getattr(self, hname))
       handlers.append(handler)
-      setattr(self, aname, tuple(handlers))
+      setattr(self, hname, tuple(handlers))
 
-  def _remove_handler(self, aname, handler):
+  def _remove_handler(self, hname, handler):
     with self._lock:
-      handlers = list(getattr(self, aname))
+      handlers = list(getattr(self, hname))
       try:
         handlers.remove(handler)
-        setattr(self, aname, tuple(handlers))
+        setattr(self, hname, tuple(handlers))
       except ValueError:
         handler = None
 
