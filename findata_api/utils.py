@@ -48,7 +48,7 @@ class MarketTimeTracker:
       odt, cdt = o.to_pydatetime(), c.to_pydatetime()
 
       assert odt.tzinfo == cdt.tzinfo
-      assert odt.tzinfo == start_date.tzinfo
+      assert odt.tzinfo == start_date.tzinfo, f'{odt.tzinfo} vs. {start_date.tzinfo}'
 
       ods = _norm_timestamp(odt)
 
