@@ -61,10 +61,7 @@ class MarketTimeTracker:
 
       for o, c in zip(mop, mcl):
         odt, cdt = o.to_pydatetime(), c.to_pydatetime()
-        ods = _norm_timestamp(odt)
-        self._tdb[ods] = (odt.timestamp(), cdt.timestamp())
-
-    return range
+        self._tdb[_norm_timestamp(odt)] = (odt.timestamp(), cdt.timestamp())
 
   def _market_times(self, dt):
     ds = _norm_timestamp(dt)
@@ -154,7 +151,7 @@ def _ktime(dt):
 
 
 def _norm_timestamp(dt):
-  return round(dt.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+  return round(dt.replace(hour=12, minute=0, second=0, microsecond=0).timestamp()) - 43200
 
 
 def market_hours(dt, market=None):
