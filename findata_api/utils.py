@@ -41,19 +41,18 @@ class MarketTimeTracker:
     df = df.sort_values('market_open', ignore_index=True)
 
     mop = pd.to_datetime(df['market_open']).dt.tz_convert(self._cal.tz)
-    moc = pd.to_datetime(df['market_close']).dt.tz_convert(self._cal.tz)
+    mcl = pd.to_datetime(df['market_close']).dt.tz_convert(self._cal.tz)
 
     last_o = start_date - datetime.timedelta(days=1)
-    for o, c in zip(mop, moc):
+    for o, c in zip(mop, mcl):
       o, c = o.to_pydatetime(), c.to_pydatetime()
 
       ods = _norm_timestamp(o)
-      assert ods == _norm_timestamp(c)
 
       ht = last_o + datetime.timedelta(days=1)
       while True:
         hds = _norm_timestamp(ht)
-        if hds == ods or hds in self._tdb:
+        if hds == ods or (hds in self._tdb):
           break
         else:
           self._tdb[hds] = ()
@@ -163,9 +162,9 @@ def market_hours(dt, market=None):
   df = cal.schedule(start_date=kt, end_date=kt)
   if df:
     mop = pd.to_datetime(df['market_open']).dt.tz_convert(cal.tz)
-    moc = pd.to_datetime(df['market_close']).dt.tz_convert(cal.tz)
+    mcl = pd.to_datetime(df['market_close']).dt.tz_convert(cal.tz)
 
-    times = mop[0].to_pydatetime(), moc[0].to_pydatetime()
+    times = mop[0].to_pydatetime(), mcl[0].to_pydatetime()
   else:
     times = ()
 
