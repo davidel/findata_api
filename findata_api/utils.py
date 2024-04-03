@@ -53,7 +53,7 @@ class MarketTimeTracker:
       while True:
         hds = _norm_timestamp(ht)
         self._tdb[hds] = ()
-        if 86400 > abs(ods - hds):
+        if hds >= ods:
           break
         ht += datetime.timedelta(days=1)
 
@@ -66,7 +66,7 @@ class MarketTimeTracker:
     times = self._tdb.get(ds, None)
     if times is None:
       self._prefetch(dt)
-      times = self._tdb[ds]
+      times = self._tdb.get(ds, ())
 
     return ds, times
 
@@ -149,7 +149,7 @@ def _ktime(dt):
 
 
 def _norm_timestamp(dt):
-  return round(dt.replace(hour=12, minute=0, second=0, microsecond=0).timestamp()) - 43200
+  return round(dt.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
 
 
 def market_hours(dt, market=None):
