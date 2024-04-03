@@ -20,46 +20,51 @@ from py_misc_utils import utils as pyu
 
 class MarketTimeTracker:
 
-  def __init__(self, open_delta=0, close_delta=0, market=None, fetch_days=None):
+  def __init__(self, open_delta=0, close_delta=0, market=None):
     self._open_delta = open_delta
     self._close_delta = close_delta
-    self._fetch_days = fetch_days or 15
     self._cal = mcal.get_calendar(market or 'NYSE')
     self._tdb = dict()
+    self._range_start, self._range_end = None, None
     self._last_ds, self._last_times = 0, ()
 
   def _load_range(self, dt):
-    delta = datetime.timedelta(days=self._fetch_days)
+    delta = datetime.timedelta(days=60)
+    if self._range_start is None:
+      self._range_start, self._range_end = dt - delta, dt + delta
 
-    return dt - delta, dt + delta
+      return self._range_start, self._range_end
+
+    if dt < self._range_start:
+      end_range = self._range_start
+      self._range_start = dt - delta
+
+      return self._range_start, end_range
+
+    if dt > self._range_end:
+      start_range = self._range_end
+      self._range_end = dt + delta
+
+      return start_range, self._range_end
 
   def _prefetch(self, dt):
-    start_date, end_date = self._load_range(dt)
+    range = self._load_range(dt)
+    if range:
+      start_date, end_date = range
 
-    df = self._cal.schedule(start_date=_ktime(start_date),
-                            end_date=_ktime(end_date))
-    df = df.sort_values('market_open', ignore_index=True)
+      df = self._cal.schedule(start_date=_ktime(start_date),
+                              end_date=_ktime(end_date))
+      df = df.sort_values('market_open', ignore_index=True)
 
-    mop = pd.to_datetime(df['market_open']).dt.tz_convert(self._cal.tz)
-    mcl = pd.to_datetime(df['market_close']).dt.tz_convert(self._cal.tz)
+      mop = pd.to_datetime(df['market_open']).dt.tz_convert(self._cal.tz)
+      mcl = pd.to_datetime(df['market_close']).dt.tz_convert(self._cal.tz)
 
-    last_o = start_date - datetime.timedelta(days=1)
-    for o, c in zip(mop, mcl):
-      odt, cdt = o.to_pydatetime(), c.to_pydatetime()
+      for o, c in zip(mop, mcl):
+        odt, cdt = o.to_pydatetime(), c.to_pydatetime()
+        ods = _norm_timestamp(odt)
+        self._tdb[ods] = (odt.timestamp(), cdt.timestamp())
 
-      ods = _norm_timestamp(odt)
-
-      ht = last_o + datetime.timedelta(days=1)
-      while True:
-        hds = _norm_timestamp(ht)
-        self._tdb[hds] = ()
-        if hds >= ods:
-          break
-        ht += datetime.timedelta(days=1)
-
-      self._tdb[ods] = (odt.timestamp(), cdt.timestamp())
-
-      last_o = odt
+    return range
 
   def _market_times(self, dt):
     ds = _norm_timestamp(dt)
