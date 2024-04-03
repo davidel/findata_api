@@ -52,16 +52,14 @@ class MarketTimeTracker:
       ht = last_o + datetime.timedelta(days=1)
       while True:
         hds = _norm_timestamp(ht)
-
-        md = abs(hds - ods)
-        if md != 0 and md < 86400:
-          alog.error(f'HMMMMMMMMMMM\t{md}')
-
-        if hds == ods or hds in self._tdb:
+        if hds in self._tdb:
           break
-        else:
-          self._tdb[hds] = ()
-          ht += datetime.timedelta(days=1)
+
+        self._tdb[hds] = ()
+        if 86400 > ods - hds:
+          break
+
+        ht += datetime.timedelta(days=1)
 
       self._tdb[ods] = (odt.timestamp(), cdt.timestamp())
 
