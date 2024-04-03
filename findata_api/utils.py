@@ -57,12 +57,12 @@ class MarketTimeTracker:
         if hds == ods or hds in self._tdb:
           break
         else:
+          self._tdb[hds] = ()
+          ht += datetime.timedelta(days=1)
+
           if hds > ods:
             print('********* WHEEEEE', hds, ods)
             break
-
-          self._tdb[hds] = ()
-          ht += datetime.timedelta(days=1)
 
       self._tdb[ods] = (o.timestamp(), c.timestamp())
 
