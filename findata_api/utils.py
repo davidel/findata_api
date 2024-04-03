@@ -29,13 +29,14 @@ class MarketTimeTracker:
     self._last_ds, self._last_times = 0, ()
 
   def _load_range(self, dt):
-    ndt = dt.replace(hour=12, minute=0, second=0, microsecond=0)
     delta = datetime.timedelta(days=self._fetch_days)
 
-    return ndt - delta, ndt + delta
+    return dt - delta, dt + delta
 
   def _prefetch(self, dt):
     start_date, end_date = self._load_range(dt)
+
+    print('++++++ KTIME', _ktime(start_date), _ktime(end_date))
 
     df = self._cal.schedule(start_date=_ktime(start_date),
                             end_date=_ktime(end_date))
@@ -49,15 +50,19 @@ class MarketTimeTracker:
       o, c = o.to_pydatetime(), c.to_pydatetime()
 
       ods = _norm_timestamp(o)
-      if last_o is not None:
-        ht = last_o + datetime.timedelta(days=1)
-        while True:
-          hds = _norm_timestamp(ht)
-          if hds == ods or hds in self._tdb:
+
+      ht = last_o + datetime.timedelta(days=1)
+      while True:
+        hds = _norm_timestamp(ht)
+        if hds == ods or hds in self._tdb:
+          break
+        else:
+          if hds > ods:
+            print('********* WHEEEEE', hds, ods)
             break
-          else:
-            self._tdb[hds] = ()
-            ht += datetime.timedelta(days=1)
+
+          self._tdb[hds] = ()
+          ht += datetime.timedelta(days=1)
 
       self._tdb[ods] = (o.timestamp(), c.timestamp())
 
