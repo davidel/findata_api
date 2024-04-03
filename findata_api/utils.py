@@ -29,10 +29,9 @@ class MarketTimeTracker:
     self._last_ds, self._last_times = 0, ()
 
   def _load_range(self, dt):
-    mddt = dt.replace(hour=12, minute=0, second=0, microsecond=0)
     delta = datetime.timedelta(days=self._fetch_days)
 
-    return mddt - delta, mddt + delta
+    return dt - delta, dt + delta
 
   def _prefetch(self, dt):
     start_date, end_date = self._load_range(dt)
@@ -48,22 +47,14 @@ class MarketTimeTracker:
     for o, c in zip(mop, mcl):
       odt, cdt = o.to_pydatetime(), c.to_pydatetime()
 
-      odt, cdt = odt.astimezone(self._cal.tz), cdt.astimezone(self._cal.tz)
-
       ods = _norm_timestamp(odt)
 
       ht = last_o + datetime.timedelta(days=1)
       while True:
         hds = _norm_timestamp(ht)
-
-        md = ods - hds
-        if md < 86400 and md > 0:
-          alog.error(f'+++++++++++ AIEEEE {md}')
-
-        if hds == ods or hds in self._tdb:
-          break
-
         self._tdb[hds] = ()
+        if 86400 > abs(ods - hds):
+          break
         ht += datetime.timedelta(days=1)
 
       self._tdb[ods] = (odt.timestamp(), cdt.timestamp())
