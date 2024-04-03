@@ -19,6 +19,7 @@ setup(name='findata_api',
           'pandas',
           'orjson',
           'py_misc_utils @ git+https://github.com/davidel/py_misc_utils',
+          'pandas_market_calendars',
       ],
       )
 
