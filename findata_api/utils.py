@@ -65,7 +65,7 @@ class MarketTimeTracker:
     ds = _norm_timestamp(dt)
     times = self._tdb.get(ds, None)
     if times is None:
-      self._prefetch(dt)
+      self._prefetch(dt.replace(hour=12, minute=0, second=0, microsecond=0))
       times = self._tdb[ds]
 
     return ds, times
