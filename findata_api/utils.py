@@ -151,7 +151,7 @@ def _ktime(dt):
 
 
 def _norm_timestamp(dt):
-  return dt.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
+  return round(dt.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
 
 
 def market_hours(dt, market=None):
