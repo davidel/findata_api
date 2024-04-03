@@ -18,10 +18,6 @@ from py_misc_utils import pd_utils as pyp
 from py_misc_utils import utils as pyu
 
 
-def _ktime(dt):
-  return dt.strftime('%Y-%m-%d')
-
-
 class MarketTimeTracker:
 
   def __init__(self, open_delta=0, close_delta=0, market=None, fetch_days=None):
@@ -30,11 +26,7 @@ class MarketTimeTracker:
     self._fetch_days = fetch_days or 15
     self._cal = mcal.get_calendar(market or 'NYSE')
     self._tdb = dict()
-    self._last = (0, ())
-    self._days = [self._last]
-
-  def _kstr(self, dt):
-    return f'{dt.year}-{dt.month:02d}-{dt.day:02d}'
+    self._last_ds, self._last_times = 0, ()
 
   def _load_range(self, dt):
     ndt = dt.replace(hour=12, minute=0, second=0, microsecond=0)
@@ -60,55 +52,41 @@ class MarketTimeTracker:
         ht = last_o + datetime.timedelta(days=1)
         ot = (o.day, o.month, o.year)
         while ot != (ht.day, ht.month, ht.year):
-          ok = _ktime(ht)
-          if ok in self._tdb:
+          ts = _norm_timestamp(ht)
+          if ts in self._tdb:
             break
           else:
-            self._tdb[ok] = ()
+            self._tdb[ts] = ()
             ht += datetime.timedelta(days=1)
 
-      self._tdb[_ktime(o)] = (o.timestamp(), c.timestamp())
+      self._tdb[_norm_timestamp(o)] = (o.timestamp(), c.timestamp())
 
       last_o = o
 
   def _market_times(self, dt):
-    ldt = dt.astimezone(self._cal.tz)
-
-    ok = _ktime(ldt)
-    times = self._tdb.get(ok, None)
+    ds = _norm_timestamp(dt)
+    times = self._tdb.get(ds, None)
     if times is None:
-      self._prefetch(ldt)
-      times = self._tdb[ok]
-
-    return times
-
-  def open_at(self, dt):
-    times = self._market_times(dt)
-
-    return len(times) == 2 and (times[0] <= dt.timestamp() < times[1])
-
-  def _add_entry(self, t, pos):
-    ts = pyd.from_timestamp(t, tz=self._cal.tz)
-    dts = ts.replace(hour=0, minute=0, second=0, microsecond=0)
-    ds = dts.timestamp()
-    times = self._market_times(ts)
-
-    self._days.insert(pos, (ds, times))
+      self._prefetch(dt)
+      times = self._tdb[ds]
 
     return ds, times
+
+  def open_at(self, dt):
+    ldt = dt.astimezone(self._cal.tz)
+    _, times = self._market_times(ldt)
+
+    return len(times) == 2 and (times[0] <= ldt.timestamp() < times[1])
 
   def _get_entry(self, t):
     # 86400 = Seconds per day.
-    if 0 <= (t - self._last[0]) < 86400:
-      return self._last
+    if 0 <= (t - self._last_ds) < 86400:
+      return self._last_ds, self._last_times
 
-    pos = bisect.bisect_right(self._days, t, key=lambda x: x[0]) - 1
-    ds, times = self._days[pos]
-    if t - ds >= 86400:
-      ds, times = self._add_entry(t, pos + 1)
-    self._last = (ds, times)
+    dt = pyd.from_timestamp(t, tz=self._cal.tz)
+    self._last_ds, self._last_times = self._market_times(dt)
 
-    return ds, times
+    return self._last_ds, self._last_times
 
   def _is_open(self, t, times):
     if not times:
@@ -166,6 +144,14 @@ class MarketTimeTracker:
         elapsed += times[1] - times[0]
 
     return sign * elapsed
+
+
+def _ktime(dt):
+  return dt.strftime('%Y-%m-%d')
+
+
+def _norm_timestamp(dt):
+  return dt.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
 
 
 def market_hours(dt, market=None):
