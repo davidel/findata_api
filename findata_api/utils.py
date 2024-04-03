@@ -48,18 +48,18 @@ class MarketTimeTracker:
     for o, c in zip(mop, moc):
       o, c = o.to_pydatetime(), c.to_pydatetime()
 
+      ods = _norm_timestamp(o)
       if last_o is not None:
         ht = last_o + datetime.timedelta(days=1)
-        ot = (o.day, o.month, o.year)
-        while ot != (ht.day, ht.month, ht.year):
-          ts = _norm_timestamp(ht)
-          if ts in self._tdb:
+        while True:
+          hds = _norm_timestamp(ht)
+          if hds == ods or hds in self._tdb:
             break
           else:
-            self._tdb[ts] = ()
+            self._tdb[hds] = ()
             ht += datetime.timedelta(days=1)
 
-      self._tdb[_norm_timestamp(o)] = (o.timestamp(), c.timestamp())
+      self._tdb[ods] = (o.timestamp(), c.timestamp())
 
       last_o = o
 
@@ -151,7 +151,7 @@ def _ktime(dt):
 
 
 def _norm_timestamp(dt):
-  return round(dt.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+  return dt.replace(hour=0, minute=0, second=0, microsecond=0).timestamp()
 
 
 def market_hours(dt, market=None):
