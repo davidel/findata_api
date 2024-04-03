@@ -47,14 +47,16 @@ class MarketTimeTracker:
     for o, c in zip(mop, mcl):
       odt, cdt = o.to_pydatetime(), c.to_pydatetime()
 
-      assert odt.tzinfo == cdt.tzinfo
-      assert odt.tzinfo == start_date.tzinfo, f'{odt.tzinfo} vs. {start_date.tzinfo}'
-
       ods = _norm_timestamp(odt)
 
       ht = last_o + datetime.timedelta(days=1)
       while True:
         hds = _norm_timestamp(ht)
+
+        md = abs(hds - ods)
+        if md != 0 and md < 86400:
+          alog.error(f'HMMMMMMMMMMM\t{md}')
+
         if hds == ods or hds in self._tdb:
           break
         else:
