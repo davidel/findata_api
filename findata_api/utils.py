@@ -53,6 +53,11 @@ class MarketTimeTracker:
       ht = last_o + datetime.timedelta(days=1)
       while True:
         hds = _norm_timestamp(ht)
+
+        md = ods - hds
+        if md < 86400 and md > 0:
+          alog.error(f'+++++++++++ AIEEEE {md}')
+
         if hds == ods or hds in self._tdb:
           break
 
