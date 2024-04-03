@@ -84,9 +84,8 @@ class MarketTimeTracker:
 
   def open_at(self, dt):
     times = self._market_times(dt)
-    ts = dt.timestamp()
 
-    return len(times) == 2 and ts >= times[0] and ts < times[1]
+    return len(times) == 2 and (times[0] <= dt.timestamp() < times[1])
 
   def _add_entry(self, t, pos):
     ts = pyd.from_timestamp(t, tz=self._cal.tz)
