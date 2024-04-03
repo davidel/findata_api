@@ -4,6 +4,7 @@ import collections
 import datetime
 import math
 import os
+import pytz
 import re
 import time
 
@@ -25,6 +26,7 @@ class MarketTimeTracker:
     self._close_delta = close_delta
     self._fetch_days = fetch_days or 15
     self._cal = mcal.get_calendar(market or 'NYSE')
+    self._tz = pytz.timezone(self._cal.tz.zone)
     self._tdb = dict()
     self._last_ds, self._last_times = 0, ()
 
@@ -41,8 +43,8 @@ class MarketTimeTracker:
                             end_date=_ktime(end_date))
     df = df.sort_values('market_open', ignore_index=True)
 
-    mop = pd.to_datetime(df['market_open']).dt.tz_convert(self._cal.tz)
-    mcl = pd.to_datetime(df['market_close']).dt.tz_convert(self._cal.tz)
+    mop = pd.to_datetime(df['market_open']).dt.tz_convert(self._tz)
+    mcl = pd.to_datetime(df['market_close']).dt.tz_convert(self._tz)
 
     last_o = start_date - datetime.timedelta(days=1)
     for o, c in zip(mop, mcl):
@@ -78,7 +80,7 @@ class MarketTimeTracker:
     return ds, times
 
   def open_at(self, dt):
-    ldt = dt.astimezone(self._cal.tz)
+    ldt = dt.astimezone(self._tz)
     _, times = self._market_times(ldt)
 
     return len(times) == 2 and (times[0] <= ldt.timestamp() < times[1])
@@ -88,7 +90,7 @@ class MarketTimeTracker:
     if 0 <= (t - self._last_ds) < 86400:
       return self._last_ds, self._last_times
 
-    dt = pyd.from_timestamp(t, tz=self._cal.tz)
+    dt = pyd.from_timestamp(t, tz=self._tz)
     self._last_ds, self._last_times = self._market_times(dt)
 
     return self._last_ds, self._last_times
