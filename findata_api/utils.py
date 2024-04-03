@@ -134,8 +134,8 @@ class MarketTimeTracker:
     while True:
       tc += 86400
       ds, times = self._get_entry(tc)
-      if ds == ds1:
-        if times:
+      if ds >= ds1:
+        if times and ds == ds1:
           elapsed += np.clip(tc, times[0], times[1]) - times[0]
 
         break
