@@ -36,7 +36,7 @@ class MarketTimeTracker:
   def _prefetch(self, dt):
     start_date, end_date = self._load_range(dt)
 
-    print('++++++ KTIME', _ktime(start_date), _ktime(end_date))
+    alog.error(f'++++++ KTIME\t{_ktime(start_date)}\t{_ktime(end_date)}')
 
     df = self._cal.schedule(start_date=_ktime(start_date),
                             end_date=_ktime(end_date))
@@ -61,7 +61,7 @@ class MarketTimeTracker:
           ht += datetime.timedelta(days=1)
 
           if hds > ods:
-            print('********* WHEEEEE', hds, ods)
+            alog.error(f'********* WHEEEEE {hds} {ods}')
             break
 
       self._tdb[ods] = (o.timestamp(), c.timestamp())
