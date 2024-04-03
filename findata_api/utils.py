@@ -175,7 +175,7 @@ def market_hours(dt, market=None):
   dtz = dt.astimezone(cal.tz)
   kt = _ktime(dtz)
 
-  df = self._cal.schedule(start_date=kt, end_date=kt)
+  df = cal.schedule(start_date=kt, end_date=kt)
   if df:
     mop = pd.to_datetime(df['market_open']).dt.tz_convert(cal.tz)
     moc = pd.to_datetime(df['market_close']).dt.tz_convert(cal.tz)
@@ -189,14 +189,12 @@ def market_hours(dt, market=None):
 
 def is_market_open(dt, market=None):
   dtz, times = market_hours(dt, market=market)
-  if times:
-    return times[0] <= dtz < times[1]
 
-  return False
+  return times[0] <= dtz < times[1] if tims else False
 
 
 def get_market_hours(dt, market=None):
-  dtz, times = market_hours(dt, market=market)
+  _, times = market_hours(dt, market=market)
 
   return times
 
