@@ -45,22 +45,25 @@ class MarketTimeTracker:
 
     last_o = start_date - datetime.timedelta(days=1)
     for o, c in zip(mop, mcl):
-      o, c = o.to_pydatetime(), c.to_pydatetime()
+      odt, cdt = o.to_pydatetime(), c.to_pydatetime()
 
-      ods = _norm_timestamp(o)
+      assert odt.tzinfo == cdt.tzinfo
+      assert odt.tzinfo == start_date.tzinfo
+
+      ods = _norm_timestamp(odt)
 
       ht = last_o + datetime.timedelta(days=1)
       while True:
         hds = _norm_timestamp(ht)
-        if hds == ods or (hds in self._tdb):
+        if hds == ods or hds in self._tdb:
           break
         else:
           self._tdb[hds] = ()
           ht += datetime.timedelta(days=1)
 
-      self._tdb[ods] = (o.timestamp(), c.timestamp())
+      self._tdb[ods] = (odt.timestamp(), cdt.timestamp())
 
-      last_o = o
+      last_o = odt
 
   def _market_times(self, dt):
     ds = _norm_timestamp(dt)
