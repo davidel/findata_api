@@ -65,7 +65,7 @@ class MarketTimeTracker:
     ds = _norm_timestamp(dt)
     times = self._tdb.get(ds, None)
     if times is None:
-      self._prefetch(dt.replace(hour=12, minute=0, second=0, microsecond=0))
+      self._prefetch(dt)
       times = self._tdb[ds]
 
     return ds, times
@@ -149,7 +149,7 @@ def _ktime(dt):
 
 
 def _norm_timestamp(dt):
-  return round(dt.replace(hour=0, minute=0, second=0, microsecond=0).timestamp())
+  return round(dt.replace(hour=12, minute=0, second=0, microsecond=0).timestamp()) - 43200
 
 
 def market_hours(dt, market=None):
