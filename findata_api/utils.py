@@ -9,6 +9,7 @@ import time
 
 import numpy as np
 import pandas as pd
+import pandas_market_calendars as mcal
 from py_misc_utils import alog
 from py_misc_utils import assert_checks as tas
 from py_misc_utils import date_utils as pyd
@@ -17,24 +18,85 @@ from py_misc_utils import pd_utils as pyp
 from py_misc_utils import utils as pyu
 
 
+def _ktime(dt):
+  return dt.strftime('%Y-%m-%d')
+
+
 class MarketTimeTracker:
 
-  def __init__(self, open_delta=0, close_delta=0):
-    self._mdts = market_day_timestamps()
-    self._open_offset = self._mdts.open + open_delta
-    self._close_offset = self._mdts.close + close_delta
-    self._tz = pyd.ny_market_timezone()
-    self._last = (0, False)
+  def __init__(self, open_delta=0, close_delta=0, market=None, fetch_days=None):
+    self._open_delta = open_delta
+    self._close_delta = close_delta
+    self._fetch_days = fetch_days or 15
+    self._cal = mcal.get_calendar(market or 'NYSE')
+    self._tdb = dict()
+    self._last = (0, ())
     self._days = [self._last]
 
+  def _kstr(self, dt):
+    return f'{dt.year}-{dt.month:02d}-{dt.day:02d}'
+
+  def _load_range(self, dt):
+    ndt = dt.replace(hour=12, minute=0, second=0, microsecond=0)
+    delta = datetime.timedelta(days=self._fetch_days)
+
+    return ndt - delta, ndt + delta
+
+  def _prefetch(self, dt):
+    start_date, end_date = self._load_range(dt)
+
+    df = self._cal.schedule(start_date=_ktime(start_date),
+                            end_date=_ktime(end_date))
+    df = df.sort_values('market_open', ignore_index=True)
+
+    mop = pd.to_datetime(df['market_open']).dt.tz_convert(self._cal.tz)
+    moc = pd.to_datetime(df['market_close']).dt.tz_convert(self._cal.tz)
+
+    last_o = start_date - datetime.timedelta(days=1)
+    for o, c in zip(mop, moc):
+      o, c = o.to_pydatetime(), c.to_pydatetime()
+
+      if last_o is not None:
+        ht = last_o + datetime.timedelta(days=1)
+        ot = (o.day, o.month, o.year)
+        while ot != (ht.day, ht.month, ht.year):
+          ok = _ktime(ht)
+          if ok in self._tdb:
+            break
+          else:
+            self._tdb[ok] = ()
+            ht += datetime.timedelta(days=1)
+
+      self._tdb[_ktime(o)] = (o.timestamp(), c.timestamp())
+
+      last_o = o
+
+  def _market_times(self, dt):
+    ldt = dt.astimezone(self._cal.tz)
+
+    ok = _ktime(ldt)
+    times = self._tdb.get(ok, None)
+    if times is None:
+      self._prefetch(ldt)
+      times = self._tdb[ok]
+
+    return times
+
+  def open_at(self, dt):
+    times = self._market_times(dt)
+    ts = dt.timestamp()
+
+    return len(times) == 2 and ts >= times[0] and ts < times[1]
+
   def _add_entry(self, t, pos):
-    ts = pyd.from_timestamp(t, tz=self._tz)
+    ts = pyd.from_timestamp(t, tz=self._cal.tz)
     dts = ts.replace(hour=0, minute=0, second=0, microsecond=0)
     ds = dts.timestamp()
-    is_open = market_open_day(ts)
-    self._days.insert(pos, (ds, is_open))
+    times = self._market_times(ts)
 
-    return ds, is_open
+    self._days.insert(pos, (ds, times))
+
+    return ds, times
 
   def _get_entry(self, t):
     # 86400 = Seconds per day.
@@ -42,22 +104,31 @@ class MarketTimeTracker:
       return self._last
 
     pos = bisect.bisect_right(self._days, t, key=lambda x: x[0]) - 1
-    ds, is_open = self._days[pos]
+    ds, times = self._days[pos]
     if t - ds >= 86400:
-      ds, is_open = self._add_entry(t, pos + 1)
-    self._last = (ds, is_open)
+      ds, times = self._add_entry(t, pos + 1)
+    self._last = (ds, times)
 
-    return ds, is_open
+    return ds, times
+
+  def _is_open(self, t, times):
+    if not times:
+      return False
+
+    open_offset = times[0] + self._open_delta
+    close_offset = times[1] + self._close_delta
+
+    return open_offset <= t < close_offset
 
   def filter(self, t):
-    ds, is_open = self._get_entry(t)
+    ds, times = self._get_entry(t)
 
-    return is_open and self._open_offset <= (t - ds) <= self._close_offset
+    return self._is_open(t, times)
 
   def filter2(self, t):
-    ds, is_open = self._get_entry(t)
+    ds, times = self._get_entry(t)
 
-    return is_open and self._open_offset <= (t - ds) <= self._close_offset, ds
+    return self._is_open(t, times), ds
 
   def elapsed(self, t0, t1):
     if t0 > t1:
@@ -66,70 +137,68 @@ class MarketTimeTracker:
     else:
       sign = 1
 
-    ds0, is_open0 = self._get_entry(t0)
-    ds1, is_open1 = self._get_entry(t1)
+    ds0, times0 = self._get_entry(t0)
+    ds1, times1 = self._get_entry(t1)
     if ds0 == ds1:
-      if is_open0:
-        ct0 = np.clip(t0 - ds0, self._mdts.open, self._mdts.close)
-        ct1 = np.clip(t1 - ds1, self._mdts.open, self._mdts.close)
+      if times0:
+        ct0 = np.clip(t0, times0[0], times0[1]) - ds0
+        ct1 = np.clip(t1, times1[0], times1[1]) - ds1
 
         return sign * (ct1 - ct0)
 
       return 0
 
-    if is_open0:
-      elapsed = self._mdts.close - np.clip(t0 - ds0, self._mdts.open, self._mdts.close)
+    if times0:
+      elapsed = times0[1] - np.clip(t0, times0[0], times0[1])
     else:
       elapsed = 0
 
-    tc, market_span = t0, self._mdts.close - self._mdts.open
+    tc = t0
     while True:
       tc += 86400
-      ds, is_open = self._get_entry(tc)
+      ds, times = self._get_entry(tc)
       if ds == ds1:
-        if is_open:
-          elapsed += np.clip(tc - ds, self._mdts.open, self._mdts.close) - self._mdts.open
+        if times:
+          elapsed += np.clip(tc, times[0], times[1]) - times[0]
 
         break
 
-      elapsed += market_span if is_open else 0
+      if times:
+        elapsed += times[1] - times[0]
 
     return sign * elapsed
 
 
-def market_day_timestamps():
-  # Market opens at 09:30 and closes at 16:00 US Eastern time.
-  # 33250 = 09:30 seconds from midnight.
-  # 57600 = 16:00 seconds from midnight.
+def market_hours(dt, market=None):
+  cal = mcal.get_calendar(market or 'NYSE')
 
-  return pyu.make_object(open=33250, close=57600)
+  dtz = dt.astimezone(cal.tz)
+  kt = _ktime(dtz)
 
+  df = self._cal.schedule(start_date=kt, end_date=kt)
+  if df:
+    mop = pd.to_datetime(df['market_open']).dt.tz_convert(cal.tz)
+    moc = pd.to_datetime(df['market_close']).dt.tz_convert(cal.tz)
 
-def market_open_day(dt):
-  # This is a gross approximation as there are other holidays which will slip
-  # through this Monday-Friday check (weekday 0 is Monday, and 6 is Sunday).
-  return dt.weekday() < 5
+    times = mop[0].to_pydatetime(), moc[0].to_pydatetime()
+  else:
+    times = ()
 
-
-def is_market_open(dt):
-  mdts = market_day_timestamps()
-  dtz = dt.astimezone(pyd.ny_market_timezone())
-  offset = pyd.day_offset(dtz)
-
-  return market_open_day(dtz) and offset >= mdts.open and offset < mdts.close
+  return dtz, times
 
 
-def get_market_hours(dt):
-  tz = pyd.ny_market_timezone()
-  mdts = market_day_timestamps()
+def is_market_open(dt, market=None):
+  dtz, times = market_hours(dt, market=market)
+  if times:
+    return times[0] <= dtz < times[1]
 
-  dtz = dt.astimezone(tz)
-  offset, ddtz = pyd.day_offset(dtz)
-  if market_open_day(dtz) and offset >= mdts.open and offset < mdts.close:
-    day_base = ddtz.timestamp()
+  return False
 
-    return (pyd.from_timestamp(day_base + mdts.open, tz=tz),
-            pyd.from_timestamp(day_base + mdts.close, tz=tz))
+
+def get_market_hours(dt, market=None):
+  dtz, times = market_hours(dt, market=market)
+
+  return times
 
 
 def market_filter(df, epoch_col, open_delta=0, close_delta=0):
