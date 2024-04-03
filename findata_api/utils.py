@@ -190,7 +190,7 @@ def market_hours(dt, market=None):
 def is_market_open(dt, market=None):
   dtz, times = market_hours(dt, market=market)
 
-  return times[0] <= dtz < times[1] if tims else False
+  return times[0] <= dtz < times[1] if times else False
 
 
 def get_market_hours(dt, market=None):
