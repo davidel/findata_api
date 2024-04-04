@@ -60,8 +60,6 @@ class MarketTimeTracker:
     if times is None:
       self._prefetch(dt)
       times = self._tdb.get(ds, None)
-      if times is None and dt.weekday() < 5:
-        alog.error(f'MUUUUUUU {dt.strftime("%a %d %b %Y, %H:%M")}')
 
     return ds, times
 
