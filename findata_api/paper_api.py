@@ -20,6 +20,7 @@ from py_misc_utils import utils as pyu
 
 from . import api_base
 from . import api_types
+from . import market_hours as mh
 from . import utils as ut
 
 
@@ -166,7 +167,7 @@ class API(api_base.TradeAPI):
                              buying_power=self._capital)
 
   def get_market_hours(self, dt):
-    return ut.get_market_hours(dt)
+    return mh.get_market_hours(dt)
 
   def now(self):
     return pyd.from_timestamp(self.scheduler.timegen.now())
