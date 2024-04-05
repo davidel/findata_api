@@ -60,6 +60,8 @@ class MarketTimeTracker:
     if times is None:
       self._prefetch(dt)
       times = self._tdb.get(ds, None)
+      if times is None:
+        self._tdb[ds] = ()
 
     return ds, times
 
@@ -67,7 +69,7 @@ class MarketTimeTracker:
     ldt = dt.astimezone(self._cal.tz)
     _, times = self._market_times(ldt)
 
-    return times is not None and (times[0] <= ldt.timestamp() < times[1])
+    return len(times) == 2 and (times[0] <= ldt.timestamp() < times[1])
 
   def _get_entry(self, t):
     # 86400 = Seconds per day.
