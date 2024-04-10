@@ -135,6 +135,7 @@ def _time_request_params(start_date, end_date, data_step):
 
 class API(api_base.API):
   # https://eodhd.com/financial-apis/intraday-historical-data-api
+  # https://eodhd.com/financial-apis/api-for-historical-data-and-volumes
 
   def __init__(self, api_key=None, api_rate=None):
     super().__init__(name='EODHD')
