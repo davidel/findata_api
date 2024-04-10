@@ -78,7 +78,7 @@ def _data_issue_request(symbol, **kwargs):
   if symbol:
     df['symbol'] = [symbol] * len(df)
   if tcol == 'Date':
-    df['t'] = df['t'].to_datetime()
+    df['t'] = pd.to_datetime(df['t'])
 
   alog.debug0(f'Fetched {len(df)} rows from EODHD for {symbol}')
 
