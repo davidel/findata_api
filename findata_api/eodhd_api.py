@@ -77,8 +77,8 @@ def _data_issue_request(symbol, **kwargs):
                      tcol: 't'}, inplace=True)
   if symbol:
     df['symbol'] = [symbol] * len(df)
-  if tcol == 'Date':
-    df['t'] = pd.to_datetime(df['t'], format='%Y-%m-%d')
+  if tcol != 'Timestamp':
+    df['t'] = (pd.to_datetime(df['t']) - datetime.datetime(1970,1,1)).dt.total_seconds().astype(np.int64)
 
   alog.debug0(f'Fetched {len(df)} rows from EODHD for {symbol}')
 
