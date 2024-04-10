@@ -80,8 +80,12 @@ def _data_issue_request(symbol, **kwargs):
 
 
 def _enumerate_ranges(start_date, end_date, data_step):
-  # Keep this the lowest, as 120 days range is more than enough as iteration step.
-  max_range = datetime.timedelta(days=120)
+  dstep = ut.get_data_step_delta(data_step)
+  start_date = pyd.align(start_date, dstep)
+  end_date = pyd.align(end_date, dstep, ceil=True)
+
+  # Keep this the lowest, as 90 days range is more than enough as iteration step.
+  max_range = datetime.timedelta(days=90)
 
   current_start = start_date
   while True:
@@ -97,6 +101,22 @@ def _enumerate_ranges(start_date, end_date, data_step):
     current_start = current_end
 
 
+def _time_request_params(start_date, end_date, data_step):
+  dstep = ut.get_data_step_delta(data_step)
+  if dstep >= datetime.timedelta(days=1):
+    start = start_date.strftime('%Y-%m-%d')
+    end = end_date.strftime('%Y-%m-%d')
+  else:
+    start = start_date.timestamp()
+    end = end_date.timestamp()
+
+  return {
+    'from': start,
+    'to': end,
+    'interval': ut.map_data_step(data_step, _DATA_STEPS),
+  }
+
+
 class API(api_base.API):
   # https://eodhd.com/financial-apis/intraday-historical-data-api
 
@@ -106,7 +126,7 @@ class API(api_base.API):
     self._api_throttle = throttle.Throttle(
       (5 if api_rate is None else api_rate) / 60.0)
 
-  def _get_intraday_data(self, symbols, start_date, end_date, data_step='5Min'):
+  def _get_intraday_data(self, symbols, start_date, end_date, data_step):
     dfs = []
     for symbol in symbols:
       alog.debug0(f'Fetching data for {symbol} with {data_step} interval from {start_date} to {end_date}')
@@ -114,9 +134,7 @@ class API(api_base.API):
       with self._api_throttle.trigger():
         df = _data_issue_request(symbol,
                                  api_key=self._api_key,
-                                 interval=ut.map_data_step(data_step, _DATA_STEPS),
-                                 **{'from': start_date.timestamp(),
-                                    'to': end_date.timestamp()})
+                                 **_time_request_params(start_date, end_date, data_step))
 
       if not df.empty:
         dfs.append(df)
@@ -128,8 +146,7 @@ class API(api_base.API):
 
     dfs = []
     for range_start, range_end in _enumerate_ranges(start_date, end_date, data_step):
-      range_dfs = self._get_intraday_data(symbols, range_start, range_end,
-                                          data_step=data_step)
+      range_dfs = self._get_intraday_data(symbols, range_start, range_end, data_step)
       dfs.extend(range_dfs)
 
     if dfs:
