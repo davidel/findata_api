@@ -26,7 +26,7 @@ def create_api(args):
   return API(api_key=args.eodhd_key, api_rate=args.api_rate)
 
 
-_QUERY_URL = 'https://eodhd.com/api/intraday'
+_QUERY_URL = 'https://eodhd.com/api'
 _TIME_COLUMN = 'Timestamp'
 _RESP_COLUMNS = {'Open', 'High', 'Low', 'Close', 'Volume'}
 _DATA_STEPS = {
@@ -39,10 +39,11 @@ _DATA_STEPS = {
 def _issue_request(symbol, **kwargs):
   timeout = kwargs.pop('timeout', pyu.env('FINDATA_TIMEOUT', 90))
   api_key = kwargs.pop('api_key', None)
+  api_kind = kwargs.pop('api_kind', 'intraday')
   params = dict(api_token=api_key, fmt='csv')
   params.update(kwargs)
 
-  resp = requests.get(f'{_QUERY_URL}/{symbol}.US', params=params, timeout=timeout)
+  resp = requests.get(f'{_QUERY_URL}/{api_kind}/{symbol}.US', params=params, timeout=timeout)
 
   tas.check_eq(resp.status_code, 200, msg=f'Request error {resp.status_code}:\n{resp.text}')
 
@@ -105,12 +106,14 @@ def _time_request_params(start_date, end_date, data_step):
   dstep = ut.get_data_step_delta(data_step)
   if dstep >= datetime.timedelta(days=1):
     return {
+      'api_kind': 'eod',
       'from': start_date.strftime('%Y-%m-%d'),
       'to': end_date.strftime('%Y-%m-%d'),
       'period': 'd',
     }
 
   return {
+    'api_kind': 'intraday',
     'from': start_date.timestamp(),
     'to': end_date.timestamp(),
     'interval': ut.map_data_step(data_step, _DATA_STEPS),
