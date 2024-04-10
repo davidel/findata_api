@@ -53,7 +53,7 @@ def _issue_request(symbol, **kwargs):
   tas.check(all(c in scols for c in _RESP_COLUMNS),
             msg=f'Missing columns: {_RESP_COLUMNS - scols}\nResponse:\n{resp.text}')
 
-  time_columns = scols & _TIME_COLUMNS
+  time_columns = tuple(scols & _TIME_COLUMNS)
   tas.check(time_columns, msg=f'Missing {_TIME_COLUMNS} column in response data')
 
   return resp.text, cols, time_columns[0]
