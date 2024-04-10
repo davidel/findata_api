@@ -49,12 +49,8 @@ def _issue_request(symbol, **kwargs):
   tas.check_eq(resp.status_code, 200, msg=f'Request error {resp.status_code}:\n{resp.text}')
 
   cols = ut.csv_parse_columns(resp.text)
-  if cols:
-    scols = set(cols)
-
-    tas.check(all(c in scols for c in _RESP_COLUMNS),
-              msg=f'Missing columns: {_RESP_COLUMNS - scols}\nResponse:\n{resp.text}')
-
+  scols = set(cols)
+  if all(c in scols for c in _RESP_COLUMNS):
     time_columns = tuple(scols & _TIME_COLUMNS)
     tas.check(time_columns, msg=f'Missing {_TIME_COLUMNS} column in response data: {cols}')
 
