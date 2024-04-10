@@ -27,7 +27,7 @@ def create_api(args):
 
 
 _QUERY_URL = 'https://eodhd.com/api'
-_TIME_COLUMN = 'Timestamp'
+_TIME_COLUMNS = {'Timestamp', 'Date'}
 _RESP_COLUMNS = {'Open', 'High', 'Low', 'Close', 'Volume'}
 _DATA_STEPS = {
   'min': 'm',
@@ -52,18 +52,20 @@ def _issue_request(symbol, **kwargs):
 
   tas.check(all(c in scols for c in _RESP_COLUMNS),
             msg=f'Missing columns: {_RESP_COLUMNS - scols}\nResponse:\n{resp.text}')
-  tas.check(_TIME_COLUMN in scols, msg=f'Missing "{_TIME_COLUMN}" column in response data')
 
-  return resp.text, cols
+  time_columns = scols & _TIME_COLUMNS
+  tas.check(time_columns, msg=f'Missing {_TIME_COLUMNS} column in response data')
+
+  return resp.text, cols, time_columns[0]
 
 
 def _data_issue_request(symbol, **kwargs):
   dtype = kwargs.pop('dtype', np.float32)
 
-  data, cols = _issue_request(symbol, **kwargs)
+  data, cols, tcol = _issue_request(symbol, **kwargs)
 
   types = {c: dtype for c in _RESP_COLUMNS}
-  types[_TIME_COLUMN] = np.int64
+  types[tcol] = np.int64
 
   df = pd.read_csv(io.StringIO(data), dtype=types)
   df.rename(columns={'Open': 'o',
@@ -71,7 +73,7 @@ def _data_issue_request(symbol, **kwargs):
                      'Low': 'l',
                      'High': 'h',
                      'Volume': 'v',
-                     _TIME_COLUMN: 't'}, inplace=True)
+                     tcol: 't'}, inplace=True)
   if symbol:
     df['symbol'] = [symbol] * len(df)
 
