@@ -54,7 +54,7 @@ def _issue_request(symbol, **kwargs):
             msg=f'Missing columns: {_RESP_COLUMNS - scols}\nResponse:\n{resp.text}')
 
   time_columns = tuple(scols & _TIME_COLUMNS)
-  tas.check(time_columns, msg=f'Missing {_TIME_COLUMNS} column in response data')
+  tas.check(time_columns, msg=f'Missing {_TIME_COLUMNS} column in response data: {cols}')
 
   return resp.text, cols, time_columns[0]
 
@@ -78,7 +78,8 @@ def _data_issue_request(symbol, **kwargs):
   if symbol:
     df['symbol'] = [symbol] * len(df)
   if tcol != 'Timestamp':
-    df['t'] = (pd.to_datetime(df['t']) - datetime.datetime(1970,1,1)).dt.total_seconds().astype(np.int64)
+    # df['t'] = (pd.to_datetime(df['t']) - datetime.datetime(1970, 1, 1)).dt.total_seconds().astype(np.int64)
+    df['t'] = ut.convert_to_epoch(df['t'], dtype=np.int64)
 
   alog.debug0(f'Fetched {len(df)} rows from EODHD for {symbol}')
 
@@ -110,11 +111,18 @@ def _enumerate_ranges(start_date, end_date, data_step):
 def _time_request_params(start_date, end_date, data_step):
   dstep = ut.get_data_step_delta(data_step)
   if dstep >= datetime.timedelta(days=1):
+    if dstep > datetime.timedelta(weeks=1):
+      period = 'm'
+    elif dstep > datetime.timedelta(days=1):
+      period = 'w'
+    else:
+      period = 'd'
+
     return {
       'api_kind': 'eod',
       'from': start_date.strftime('%Y-%m-%d'),
       'to': end_date.strftime('%Y-%m-%d'),
-      'period': 'd',
+      'period': period,
     }
 
   return {
