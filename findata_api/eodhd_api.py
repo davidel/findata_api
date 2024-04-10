@@ -104,15 +104,15 @@ def _enumerate_ranges(start_date, end_date, data_step):
 def _time_request_params(start_date, end_date, data_step):
   dstep = ut.get_data_step_delta(data_step)
   if dstep >= datetime.timedelta(days=1):
-    start = start_date.strftime('%Y-%m-%d')
-    end = end_date.strftime('%Y-%m-%d')
-  else:
-    start = start_date.timestamp()
-    end = end_date.timestamp()
+    return {
+      'from': start_date.strftime('%Y-%m-%d'),
+      'to': end_date.strftime('%Y-%m-%d'),
+      'period': 'd',
+    }
 
   return {
-    'from': start,
-    'to': end,
+    'from': start_date.timestamp(),
+    'to': end_date.timestamp(),
     'interval': ut.map_data_step(data_step, _DATA_STEPS),
   }
 
