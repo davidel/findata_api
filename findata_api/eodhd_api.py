@@ -65,7 +65,7 @@ def _data_issue_request(symbol, **kwargs):
   data, cols, tcol = _issue_request(symbol, **kwargs)
 
   types = {c: dtype for c in _RESP_COLUMNS}
-  types[tcol] = np.int64
+  types[tcol] = np.int64 if tcol == 'Timestamp' else np.datetime64
 
   df = pd.read_csv(io.StringIO(data), dtype=types)
   df.rename(columns={'Open': 'o',
