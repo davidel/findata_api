@@ -43,18 +43,16 @@ def _issue_request(func, **kwargs):
   tas.check_eq(resp.status_code, 200, msg=f'Request error {resp.status_code}:\n{resp.text}')
 
   cols = ut.csv_parse_columns(resp.text)
-  scols = set(cols)
+  if cols:
+    scols = set(cols)
 
-  tas.check(all(c in scols for c in _RESP_COLUMNS),
-            msg=f'Columns: {cols}\nMissing columns: {_RESP_COLUMNS - scols}\nResponse:\n{resp.text}')
+    tas.check(all(c in scols for c in _RESP_COLUMNS),
+              msg=f'Columns: {cols}\nMissing columns: {_RESP_COLUMNS - scols}\nResponse:\n{resp.text}')
 
-  time_col = None
-  for c in _TIME_COLUMNS:
-    if c in scols:
-      time_col = c
-      break
+    time_columns = tuple(scols & _TIME_COLUMNS)
+    tas.check(time_columns, msg=f'Missing {_TIME_COLUMNS} column in response data: {cols}')
 
-  return resp.text, cols, time_col
+    return resp.text, cols, time_columns[0]
 
 
 def _parse_datetime(s):
@@ -66,27 +64,29 @@ def _data_issue_request(func, **kwargs):
   dtype = kwargs.pop('dtype', np.float32)
   symbol = kwargs.get('symbol', None)
 
-  data, cols, time_col = _issue_request(func, **kwargs)
+  rresp = _issue_request(func, **kwargs)
+  if rresp is not None:
+    data, cols, time_col = rresp
 
-  types = {c: dtype for c in _RESP_COLUMNS}
+    types = {c: dtype for c in _RESP_COLUMNS}
 
-  df = pd.read_csv(io.StringIO(data),
-                   dtype=types,
-                   parse_dates=[time_col] if time_col else True)
-  df.rename(columns={'open': 'o',
-                     'close': 'c',
-                     'low': 'l',
-                     'high': 'h',
-                     'volume': 'v',
-                     time_col: 't'}, inplace=True)
-  if 't' in df:
-    df['t'] = [pyd.np_datetime_to_epoch(_parse_datetime(s)) for s in df['t']]
-  if symbol:
-    df['symbol'] = [symbol] * len(df)
+    df = pd.read_csv(io.StringIO(data),
+                     dtype=types,
+                     parse_dates=[time_col] if time_col else True)
+    df.rename(columns={'open': 'o',
+                       'close': 'c',
+                       'low': 'l',
+                       'high': 'h',
+                       'volume': 'v',
+                       time_col: 't'}, inplace=True)
+    if 't' in df:
+      df['t'] = [pyd.np_datetime_to_epoch(_parse_datetime(s)) for s in df['t']]
+    if symbol:
+      df['symbol'] = [symbol] * len(df)
 
-  alog.debug0(f'Fetched {len(df)} rows from AV for {symbol}')
+    alog.debug0(f'Fetched {len(df)} rows from AV for {symbol}')
 
-  return df
+    return df
 
 
 def _enumerate_months(start_date, end_date):
@@ -126,7 +126,11 @@ class API(api_base.API):
                                  interval=data_step.lower(),
                                  month=month,
                                  outputsize='full')
-      dfs.append(df)
+
+      if df is None or df.empty:
+        alog.info(f'Missing data for "{symbol}" with {data_step} interval for month {month or "LATEST"}')
+      else:
+        dfs.append(df)
 
     return dfs
 

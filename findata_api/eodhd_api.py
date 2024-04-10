@@ -49,39 +49,42 @@ def _issue_request(symbol, **kwargs):
   tas.check_eq(resp.status_code, 200, msg=f'Request error {resp.status_code}:\n{resp.text}')
 
   cols = ut.csv_parse_columns(resp.text)
-  scols = set(cols)
+  if cols:
+    scols = set(cols)
 
-  tas.check(all(c in scols for c in _RESP_COLUMNS),
-            msg=f'Missing columns: {_RESP_COLUMNS - scols}\nResponse:\n{resp.text}')
+    tas.check(all(c in scols for c in _RESP_COLUMNS),
+              msg=f'Missing columns: {_RESP_COLUMNS - scols}\nResponse:\n{resp.text}')
 
-  time_columns = tuple(scols & _TIME_COLUMNS)
-  tas.check(time_columns, msg=f'Missing {_TIME_COLUMNS} column in response data: {cols}')
+    time_columns = tuple(scols & _TIME_COLUMNS)
+    tas.check(time_columns, msg=f'Missing {_TIME_COLUMNS} column in response data: {cols}')
 
-  return resp.text, cols, time_columns[0]
+    return resp.text, cols, time_columns[0]
 
 
 def _data_issue_request(symbol, **kwargs):
   dtype = kwargs.pop('dtype', np.float32)
 
-  data, cols, tcol = _issue_request(symbol, **kwargs)
+  rresp = _issue_request(symbol, **kwargs)
+  if rresp is not None:
+    data, cols, tcol = rresp
 
-  types = {c: dtype for c in _RESP_COLUMNS}
+    types = {c: dtype for c in _RESP_COLUMNS}
 
-  df = pd.read_csv(io.StringIO(data), dtype=types)
-  df.rename(columns={'Open': 'o',
-                     'Close': 'c',
-                     'Low': 'l',
-                     'High': 'h',
-                     'Volume': 'v',
-                     tcol: 't'}, inplace=True)
-  if symbol:
-    df['symbol'] = [symbol] * len(df)
-  if tcol in _DATE_COLUMNS:
-    df['t'] = ut.convert_to_epoch(df['t'], dtype=np.int64)
+    df = pd.read_csv(io.StringIO(data), dtype=types)
+    df.rename(columns={'Open': 'o',
+                       'Close': 'c',
+                       'Low': 'l',
+                       'High': 'h',
+                       'Volume': 'v',
+                       tcol: 't'}, inplace=True)
+    if symbol:
+      df['symbol'] = [symbol] * len(df)
+    if tcol in _DATE_COLUMNS:
+      df['t'] = ut.convert_to_epoch(df['t'], dtype=np.int64)
 
-  alog.debug0(f'Fetched {len(df)} rows from EODHD for {symbol}')
+    alog.debug0(f'Fetched {len(df)} rows from EODHD for {symbol}')
 
-  return df
+    return df
 
 
 def _enumerate_ranges(start_date, end_date, data_step):
@@ -151,7 +154,9 @@ class API(api_base.API):
                                  api_key=self._api_key,
                                  **_time_request_params(start_date, end_date, data_step))
 
-      if not df.empty:
+      if df is None or df.empty:
+        alog.info(f'Missing data for "{symbol}" from {start_date} to {end_date}')
+      else:
         dfs.append(df)
 
     return dfs
