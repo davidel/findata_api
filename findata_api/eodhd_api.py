@@ -28,6 +28,7 @@ def create_api(args):
 
 _QUERY_URL = 'https://eodhd.com/api'
 _TIME_COLUMNS = {'Timestamp', 'Date'}
+_TIMESTAMP_COLUMNS = {'Timestamp'}
 _RESP_COLUMNS = {'Open', 'High', 'Low', 'Close', 'Volume'}
 _DATA_STEPS = {
   'min': 'm',
@@ -65,7 +66,7 @@ def _data_issue_request(symbol, **kwargs):
   data, cols, tcol = _issue_request(symbol, **kwargs)
 
   types = {c: dtype for c in _RESP_COLUMNS}
-  if tcol == 'Timestamp':
+  if tcol in _TIMESTAMP_COLUMNS:
     types[tcol] = np.int64
 
   df = pd.read_csv(io.StringIO(data), dtype=types)
@@ -77,8 +78,7 @@ def _data_issue_request(symbol, **kwargs):
                      tcol: 't'}, inplace=True)
   if symbol:
     df['symbol'] = [symbol] * len(df)
-  if tcol != 'Timestamp':
-    # df['t'] = (pd.to_datetime(df['t']) - datetime.datetime(1970, 1, 1)).dt.total_seconds().astype(np.int64)
+  if tcol not in _TIMESTAMP_COLUMNS:
     df['t'] = ut.convert_to_epoch(df['t'], dtype=np.int64)
 
   alog.debug0(f'Fetched {len(df)} rows from EODHD for {symbol}')
