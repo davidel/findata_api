@@ -37,6 +37,10 @@ _DATA_STEPS = {
 }
 
 
+def _norm_symbol(symbol):
+  return symbol.replace('.', '-')
+
+
 def _issue_request(symbol, **kwargs):
   timeout = kwargs.pop('timeout', pyu.env('FINDATA_TIMEOUT', 90))
   api_key = kwargs.pop('api_key', None)
@@ -44,7 +48,9 @@ def _issue_request(symbol, **kwargs):
   params = dict(api_token=api_key, fmt='csv')
   params.update(kwargs)
 
-  resp = requests.get(f'{_QUERY_URL}/{api_kind}/{symbol}.US', params=params, timeout=timeout)
+  resp = requests.get(f'{_QUERY_URL}/{api_kind}/{_norm_symbol(symbol)}.US',
+                      params=params,
+                      timeout=timeout)
 
   tas.check_eq(resp.status_code, 200, msg=f'Request error {resp.status_code}:\n{resp.text}')
 
