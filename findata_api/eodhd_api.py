@@ -34,7 +34,25 @@ _DATA_STEPS = {
   'min': 'm',
   'hour': 'h',
   'day': 'd',
+  'wk': 'w',
+  'week': 'w',
+  'month': 'mo',
 }
+_EOD_STEPS = {
+  '1d': 'd',
+  '1w': 'w',
+  '1mo': 'm',
+}
+_VALID_STEPS = {'1m', '5m', '1h'} | set(_EOD_STEPS.keys())
+
+
+def _map_data_step(data_step):
+  mstep = ut.map_data_step(data_step, _DATA_STEPS)
+
+  tas.check(mstep in _VALID_STEPS,
+            msg=f'Invalid data step for EODHD API: "{mstep}" not in {tuple(_VALID_STEPS)}')
+
+  return mstep
 
 
 def _norm_symbol(symbol):
@@ -116,15 +134,10 @@ def _enumerate_ranges(start_date, end_date, data_step):
 
 
 def _time_request_params(start_date, end_date, data_step):
-  dstep = ut.get_data_step_delta(data_step)
-  if dstep >= datetime.timedelta(days=1):
-    if dstep > datetime.timedelta(weeks=1):
-      period = 'm'
-    elif dstep > datetime.timedelta(days=1):
-      period = 'w'
-    else:
-      period = 'd'
+  mstep = _map_data_step(data_step)
 
+  period = _EOD_STEPS.get(mstep, None)
+  if period is not None:
     return {
       'api_kind': 'eod',
       'from': start_date.strftime('%Y-%m-%d'),
@@ -136,7 +149,7 @@ def _time_request_params(start_date, end_date, data_step):
     'api_kind': 'intraday',
     'from': start_date.timestamp(),
     'to': end_date.timestamp(),
-    'interval': ut.map_data_step(data_step, _DATA_STEPS),
+    'interval': mstep,
   }
 
 
