@@ -66,15 +66,18 @@ def _issue_request(symbol, **kwargs):
   params = dict(api_token=api_key, fmt='csv')
   params.update(kwargs)
 
-  resp = requests.get(f'{_QUERY_URL}/{api_kind}/{_norm_symbol(symbol)}.US',
-                      params=params,
-                      timeout=timeout)
+  req_url = f'{_QUERY_URL}/{api_kind}/{_norm_symbol(symbol)}.US'
+
+  resp = requests.get(req_url, params=params, timeout=timeout)
 
   tas.check_eq(resp.status_code, 200, msg=f'Request error {resp.status_code}:\n{resp.text}')
 
   cols = ut.csv_parse_columns(resp.text)
   scols = set(cols)
-  if all(c in scols for c in _RESP_COLUMNS):
+  if not all(c in scols for c in _RESP_COLUMNS):
+    alog.warning(f'Request did not return any results: {req_url} with {params}' \
+                 f'Response was:\n{resp.text}')
+  else:
     time_columns = tuple(scols & _TIME_COLUMNS)
     tas.check(time_columns, msg=f'Missing {_TIME_COLUMNS} column in response data: {cols}')
 
