@@ -94,8 +94,12 @@ def _enumerate_ranges(start_date, end_date, data_step):
   start_date = pyd.align(start_date, dstep)
   end_date = pyd.align(end_date, dstep, ceil=True)
 
-  # Keep this the lowest, as 90 days range is more than enough as iteration step.
-  max_range = datetime.timedelta(days=90)
+  if dstep <= datetime.timedelta(minutes=1):
+    max_range = datetime.timedelta(days=120)
+  elif dstep <= datetime.timedelta(minutes=5):
+    max_range = datetime.timedelta(days=600)
+  else:
+    max_range = datetime.timedelta(days=7200)
 
   current_start = start_date
   while True:
