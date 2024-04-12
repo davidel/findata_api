@@ -141,6 +141,7 @@ def _ws_url(cluster, service=None):
 
 
 class WebSocketClient:
+
   def __init__(self, url, auth_key, process_message,
                on_close=None,
                on_error=None):

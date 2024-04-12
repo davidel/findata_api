@@ -2,8 +2,10 @@ import datetime
 import io
 import os
 import requests
+import websocket
 
 import numpy as np
+import orjson
 import pandas as pd
 from py_misc_utils import alog
 from py_misc_utils import assert_checks as tas
@@ -154,6 +156,37 @@ def _time_request_params(start_date, end_date, data_step):
     'to': int(end_date.timestamp()),
     'interval': mstep,
   }
+
+
+class WebSocketClient:
+
+  def __init__(self, url, auth_key, process_message, on_close=None, on_error=None):
+    self._url = f'{url}?api_token={auth_key}'
+    self._run_thread = None
+    self._ws = websocket.WebSocketApp(self._url,
+                                      on_close=on_close,
+                                      on_error=on_error,
+                                      on_message=process_message)
+
+  def run(self, **kwargs):
+    self._ws.run_forever(**kwargs)
+
+  def run_async(self, **kwargs):
+    self._run_thread = threading.Thread(target=self.run, kwargs=kwargs)
+    self._run_thread.start()
+
+  def close_connection(self):
+    self._ws.close()
+    if self._run_thread:
+      self._run_thread.join()
+
+  def subscribe(self, *symbols):
+    symlist = ','.join(symbols)
+    self._ws.send(f'{{"action":"subscribe","symbols":"{symlist}"}}')
+
+  def unsubscribe(self, *symbols):
+    symlist = ','.join(symbols)
+    self._ws.send(f'{{"action":"unsubscribe","symbols":"{symlist}"}}')
 
 
 class API(api_base.API):
