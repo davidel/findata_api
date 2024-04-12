@@ -362,7 +362,9 @@ class MultiStream:
 
   def register(self, symbols, handlers):
     for source, handler in handlers.items():
-      self._streams[source].register(symbols, handler)
+      stream = self._streams.get(source, None)
+      if stream is not None:
+        stream.register(symbols, handler)
 
 
 class API(api_base.API):
