@@ -214,7 +214,7 @@ class Stream:
     self._ctx = Stream._make_ctx()
     self._ws_api = WebSocketClient(url, api_key,
                                    self._process_message,
-                                   op_open=self._on_open,
+                                   on_open=self._on_open,
                                    on_close=self._on_close,
                                    on_error=self._on_error)
 
