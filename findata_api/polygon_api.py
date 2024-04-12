@@ -4,6 +4,7 @@ import os
 import re
 import socket
 import threading
+import websocket
 
 import orjson
 import pandas as pd
@@ -21,7 +22,6 @@ from . import utils as ut
 
 try:
   import polygon
-  import websocket
 
   MODULE_NAME = 'POLYGON'
 
