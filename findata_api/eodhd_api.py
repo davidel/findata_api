@@ -14,6 +14,7 @@ from py_misc_utils import throttle
 from py_misc_utils import utils as pyu
 
 from . import api_base
+from . import api_types
 from . import utils as ut
 
 
@@ -306,14 +307,33 @@ class Stream:
       self._register(symbols, handler)
 
 
+def _get_stream_ts(v):
+  return v / 1000
+
+
+def _marshal_stream_trade(t):
+  return api_types.StreamTrade(timestamp=_get_stream_ts(t['t']),
+                               symbol=t['s'],
+                               quantity=t['v'],
+                               price=t['p'])
+
+
+def _marshal_stream_quote(q):
+  return api_types.StreamQuote(timestamp=_get_stream_ts(q['t']),
+                               symbol=q['s'],
+                               bid_size=q['bs'],
+                               bid_price=q['bp'],
+                               ask_size=q['as'],
+                               ask_price=q['ap'])
+
 class MultiStream:
 
   def __init__(self, api_key):
     self._streams = dict()
     self._streams['trades'] = Stream('wss://ws.eodhistoricaldata.com/ws/us', api_key,
-                                     _marshal_trades)
+                                     _marshal_stream_trade)
     self._streams['quotes'] = Stream('wss://ws.eodhistoricaldata.com/ws/us-quote', api_key,
-                                     _marshal_quotes)
+                                     _marshal_stream_quote)
 
   def start(self):
     for stream in self._streams.values():
