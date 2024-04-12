@@ -189,15 +189,170 @@ class WebSocketClient:
     self._ws.send(f'{{"action":"unsubscribe","symbols":"{symlist}"}}')
 
 
+class Stream:
+
+  DEFAULT_CTX = dict(
+    handler=None,
+    started=False,
+    ws_symbols=(),
+  )
+
+  SOCKET_BUFFER_SIZE = 8 * 1024 * 1024
+
+  def __init__(self, url, api_key, marshal):
+    self._marshal = marshal
+    self._lock = threading.Lock()
+    self._ctx = Stream._make_ctx()
+    self._ws_trades_api = WebSocketClient(url, api_key,
+                                          self._process_message,
+                                          on_close=self._on_close,
+                                          on_error=self._on_error)
+
+  @staticmethod
+  def _make_ctx(**kwargs):
+    args = Stream.DEFAULT_CTX.copy()
+    args.update(**kwargs)
+
+    return pyu.make_object(**args)
+
+  def _new_ctx(self, **kwargs):
+    ctx = self._ctx
+    args = {k: getattr(ctx, k) for k in Stream.DEFAULT_CTX.keys()}
+    args.update(**kwargs)
+
+    nctx = pyu.make_object(**args)
+    self._ctx = nctx
+
+    return nctx
+
+  def _reconnect(self):
+    with self._lock:
+      alog.info(f'Reconnecting EODHD WebSocket')
+
+      self._stop()
+      self._start()
+
+      ctx = self._ctx
+      if ctx.ws_symbols:
+        # Prevent _register() from unregistering existing symbols, as the connection
+        # is not the same they were registered into.
+        self._new_ctx(ws_symbols=())
+        self._register(ctx.ws_symbols, ctx.handler)
+
+  def _start(self):
+    alog.debug2(f'Starting EODHD WebSocket connection')
+
+    # We bump up the WebSocket buffer size to avoid message traffic peaks to
+    # cause back pressure on the server side, which will result in the server
+    # dropping the connection.
+    buffer_size = pyu.getenv('WEBSOCK_BUFSIZE', dtype=int,
+                             defval=Stream.SOCKET_BUFFER_SIZE)
+    alog.debug0(f'Using WebSocket receive buffer of {buffer_size} bytes')
+
+    socket_options = (
+      (socket.SOL_SOCKET, socket.SO_RCVBUF, buffer_size),
+    )
+
+    self._ws_api.run_async(sockopt=socket_options)
+    self._new_ctx(started=True)
+
+  def start(self):
+    with self._lock:
+      self._start()
+
+  def _stop(self):
+    alog.debug2(f'Stopping EODHD WebSocket connection')
+    self._new_ctx(started=False)
+    self._ws_api.close_connection()
+
+  def stop(self):
+    with self._lock:
+      self._stop()
+
+  def _on_close(self, wsa, status, msg):
+    ctx = self._ctx
+    alog.warning(f'Streaming connection closed: ({status}) {msg}')
+    if ctx.started:
+      # Cannot do the reconnect work from inside the WebSocket callback. Just spawn
+      # an async thread and do it from there. The WebSocket API will call the on-close
+      # callback one all the teardown is completed, making it safe to issue a new
+      # run_async().
+      pyu.run_async(pyu.xwrap_fn(self._reconnect))
+
+  def _on_error(self, wsa, error):
+    alog.error(f'Streaming connection error: {error}')
+
+  def _process_message(self, wsa, msg):
+    # Code within WebSocket callbacks should not take the lock. All the data needed
+    # by the callback is stored within the context, whose content is never modified
+    # (it gets just replaced with a new copy).
+    ctx = self._ctx
+    if ctx.handler is not None:
+      data = orjson.loads(msg)
+      ctx.handler(self._marshal(data))
+
+  def _register(self, symbols, handler):
+    ctx = self._ctx
+    if ctx.ws_symbols:
+      self._ws_api.unsubscribe(*ctx.ws_symbols)
+
+    if symbols:
+      self._ws_api.subscribe(*symbols)
+
+    self._new_ctx(ws_symbols=tuple(symbols), handler=handler)
+
+  def register(self, symbols, handler):
+    with self._lock:
+      self._register(symbols, handler)
+
+
+class MultiStream:
+
+  def __init__(self, api_key):
+    self._streams = dict()
+    self._streams['trades'] = Stream('wss://ws.eodhistoricaldata.com/ws/us', api_key,
+                                     _marshal_trades)
+    self._streams['quotes'] = Stream('wss://ws.eodhistoricaldata.com/ws/us-quote', api_key,
+                                     _marshal_quotes)
+
+  def start(self):
+    for stream in self._streams.values():
+      stream.start()
+
+  def stop(self):
+    for stream in self._streams.values():
+      stream.stop()
+
+  def register(self, symbols, handlers):
+    for source, handler in handlers.items():
+      self._streams[source].register(symbols, handler)
+
+
 class API(api_base.API):
   # https://eodhd.com/financial-apis/intraday-historical-data-api
   # https://eodhd.com/financial-apis/api-for-historical-data-and-volumes
 
   def __init__(self, api_key=None, api_rate=None):
-    super().__init__(name='EODHD')
+    super().__init__(name='EODHD', supports_streaming=True)
     self._api_key = api_key or pyu.getenv('EODHD_KEY')
     self._api_throttle = throttle.Throttle(
       (5 if api_rate is None else api_rate) / 60.0)
+    self._stream = None
+
+  def register_stream_handlers(self, symbols, handlers):
+    if self._stream is None and symbols:
+      stream = MultiStream(self._api_key)
+      pyfw.fin_wrap(self, '_stream', stream, finfn=stream.stop)
+      self._stream.start()
+
+    alog.debug1(f'Registering Streaming: handlers={tuple(handlers.keys())}\tsymbols={symbols}')
+
+    self._stream.register(symbols, handlers)
+
+    alog.debug1(f'Registration done!')
+
+    if self._stream is not None and not symbols:
+      pyfw.fin_wrap(self, '_stream', None)
 
   def _get_intraday_data(self, symbols, start_date, end_date, data_step):
     dfs = []
