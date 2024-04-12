@@ -75,7 +75,7 @@ def _issue_request(symbol, **kwargs):
   cols = ut.csv_parse_columns(resp.text)
   scols = set(cols)
   if not all(c in scols for c in _RESP_COLUMNS):
-    alog.warning(f'Request did not return any results: {req_url} with {params}' \
+    alog.warning(f'Request did not return any results: {req_url} with {params}\n' \
                  f'Response was:\n{resp.text}')
   else:
     time_columns = tuple(scols & _TIME_COLUMNS)
