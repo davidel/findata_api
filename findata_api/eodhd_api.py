@@ -2,6 +2,7 @@ import datetime
 import io
 import os
 import requests
+import socket
 import threading
 import websocket
 
