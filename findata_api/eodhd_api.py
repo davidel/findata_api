@@ -150,8 +150,8 @@ def _time_request_params(start_date, end_date, data_step):
 
   return {
     'api_kind': 'intraday',
-    'from': start_date.timestamp(),
-    'to': end_date.timestamp(),
+    'from': int(start_date.timestamp()),
+    'to': int(end_date.timestamp()),
     'interval': mstep,
   }
 
