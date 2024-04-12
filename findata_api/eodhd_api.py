@@ -206,10 +206,10 @@ class Stream:
     self._marshal = marshal
     self._lock = threading.Lock()
     self._ctx = Stream._make_ctx()
-    self._ws_trades_api = WebSocketClient(url, api_key,
-                                          self._process_message,
-                                          on_close=self._on_close,
-                                          on_error=self._on_error)
+    self._ws_api = WebSocketClient(url, api_key,
+                                   self._process_message,
+                                   on_close=self._on_close,
+                                   on_error=self._on_error)
 
   @staticmethod
   def _make_ctx(**kwargs):
