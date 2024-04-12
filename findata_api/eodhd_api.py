@@ -164,10 +164,14 @@ def _time_request_params(start_date, end_date, data_step):
 
 class WebSocketClient:
 
-  def __init__(self, url, auth_key, process_message, on_close=None, on_error=None):
+  def __init__(self, url, auth_key, process_message,
+               on_open=None,
+               on_close=None,
+               on_error=None):
     self._url = f'{url}?api_token={auth_key}'
     self._run_thread = None
     self._ws = websocket.WebSocketApp(self._url,
+                                      on_open=_on_open,
                                       on_close=on_close,
                                       on_error=on_error,
                                       on_message=process_message)
@@ -206,11 +210,17 @@ class Stream:
   def __init__(self, url, api_key, marshal):
     self._marshal = marshal
     self._lock = threading.Lock()
+    self._connected = threading.Event()
     self._ctx = Stream._make_ctx()
     self._ws_api = WebSocketClient(url, api_key,
                                    self._process_message,
+                                   op_open=self._on_open,
                                    on_close=self._on_close,
                                    on_error=self._on_error)
+
+  def _on_open(self, wsa):
+    alog.info(f'EODHD WebSocket connected')
+    self._connected.set()
 
   @staticmethod
   def _make_ctx(**kwargs):
@@ -264,10 +274,14 @@ class Stream:
     with self._lock:
       self._start()
 
+    alog.debug0(f'Waiting for EODHD WebSocket connection ...')
+    self._connected.wait()
+
   def _stop(self):
     alog.debug2(f'Stopping EODHD WebSocket connection')
     self._new_ctx(started=False)
     self._ws_api.close_connection()
+    self._connected.clear()
 
   def stop(self):
     with self._lock:
