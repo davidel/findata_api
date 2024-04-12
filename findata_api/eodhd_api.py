@@ -171,7 +171,7 @@ class WebSocketClient:
     self._url = f'{url}?api_token={auth_key}'
     self._run_thread = None
     self._ws = websocket.WebSocketApp(self._url,
-                                      on_open=_on_open,
+                                      on_open=on_open,
                                       on_close=on_close,
                                       on_error=on_error,
                                       on_message=process_message)
