@@ -11,6 +11,7 @@ import orjson
 import pandas as pd
 from py_misc_utils import alog
 from py_misc_utils import assert_checks as tas
+from py_misc_utils import context_base as pycb
 from py_misc_utils import date_utils as pyd
 from py_misc_utils import fin_wrap as pyfw
 from py_misc_utils import throttle
@@ -197,7 +198,7 @@ class WebSocketClient:
     self._ws.send(f'{{"action":"unsubscribe","symbols":"{symlist}"}}')
 
 
-class Stream(pyu.ContextBase):
+class Stream(pycb.ContextBase):
 
   DEFAULT_CTX = dict(
     handler=None,
