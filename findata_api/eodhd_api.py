@@ -207,7 +207,7 @@ class Stream:
 
   SOCKET_BUFFER_SIZE = 8 * 1024 * 1024
 
-  def __init__(self, url, api_key, marshal):
+  def __init__(self, api_key, url, marshal):
     self._marshal = marshal
     self._lock = threading.Lock()
     self._connected = threading.Event()
@@ -224,14 +224,14 @@ class Stream:
 
   @staticmethod
   def _make_ctx(**kwargs):
-    args = Stream.DEFAULT_CTX.copy()
+    args = __class__.DEFAULT_CTX.copy()
     args.update(**kwargs)
 
     return pyu.make_object(**args)
 
   def _new_ctx(self, **kwargs):
     ctx = self._ctx
-    args = {k: getattr(ctx, k) for k in Stream.DEFAULT_CTX.keys()}
+    args = {k: getattr(ctx, k) for k in self.DEFAULT_CTX.keys()}
     args.update(**kwargs)
 
     nctx = pyu.make_object(**args)
@@ -357,6 +357,11 @@ def _marshal_stream_quote(q):
 
 class MultiStream:
 
+  STREAM_PARAMS = {
+    'trades': ('wss://ws.eodhistoricaldata.com/ws/us', _marshal_stream_trade),
+    'quotes': ('wss://ws.eodhistoricaldata.com/ws/us-quote', _marshal_stream_quote),
+  }
+
   def __init__(self, api_key):
     self._api_key = api_key
     self._lock = threading.Lock()
@@ -366,14 +371,10 @@ class MultiStream:
   def _ensure_stream(self, source):
     stream = self._streams.get(source, None)
     if stream is None:
-      if source == 'trades':
-        stream = Stream('wss://ws.eodhistoricaldata.com/ws/us', self._api_key,
-                        _marshal_stream_trade)
-      elif source == 'quotes':
-        stream = Stream('wss://ws.eodhistoricaldata.com/ws/us-quote', self._api_key,
-                        _marshal_stream_quote)
+      sparams = self.STREAM_PARAMS.get(source, None)
+      if sparams is not None:
+        stream = Stream(self._api_key, *sparams)
 
-      if stream is not None:
         if self._started:
           stream.start()
 
