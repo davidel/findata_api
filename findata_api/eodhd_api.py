@@ -418,6 +418,8 @@ class MultiStream:
           stream = self._ensure_stream(source)
           if stream is not None:
             stream.register(symbols, handler)
+          else:
+            alog.warning(f'Not supported by the EODHD streaming API: {source}')
 
         for source, stream in tuple(self._streams.items()):
           if source not in handlers:
