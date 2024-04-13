@@ -311,8 +311,11 @@ class Stream:
     ctx = self._ctx
     if ctx.handler is not None:
       data = orjson.loads(msg)
-      alog.info(f'STREAM: {data}')
-      ctx.handler(self._marshal(data))
+      mdata = self._marshal(data)
+      if mdata is not None:
+        ctx.handler(mdata)
+      else:
+        alog.info(f'Stream Message: {data}')
 
   def _register(self, symbols, handler):
     ctx = self._ctx
@@ -334,19 +337,23 @@ def _get_stream_ts(v):
 
 
 def _marshal_stream_trade(t):
-  return api_types.StreamTrade(timestamp=_get_stream_ts(t['t']),
-                               symbol=t['s'],
-                               quantity=t['v'],
-                               price=t['p'])
+  ts = t.get('t', None)
+  if ts is not None:
+    return api_types.StreamTrade(timestamp=_get_stream_ts(ts),
+                                 symbol=t['s'],
+                                 quantity=t['v'],
+                                 price=t['p'])
 
 
 def _marshal_stream_quote(q):
-  return api_types.StreamQuote(timestamp=_get_stream_ts(q['t']),
-                               symbol=q['s'],
-                               bid_size=q['bs'],
-                               bid_price=q['bp'],
-                               ask_size=q['as'],
-                               ask_price=q['ap'])
+  ts = q.get('t', None)
+  if ts is not None:
+    return api_types.StreamQuote(timestamp=_get_stream_ts(ts),
+                                 symbol=q['s'],
+                                 bid_size=q['bs'],
+                                 bid_price=q['bp'],
+                                 ask_size=q['as'],
+                                 ask_price=q['ap'])
 
 class MultiStream:
 
