@@ -197,7 +197,7 @@ class WebSocketClient:
     self._ws.send(f'{{"action":"unsubscribe","symbols":"{symlist}"}}')
 
 
-class Stream:
+class Stream(pyu.ContextBase):
 
   DEFAULT_CTX = dict(
     handler=None,
@@ -208,11 +208,11 @@ class Stream:
   SOCKET_BUFFER_SIZE = 8 * 1024 * 1024
 
   def __init__(self, api_key, name, url, marshal):
+    super().__init__(self.DEFAULT_CTX)
     self._name = name
     self._marshal = marshal
     self._lock = threading.Lock()
     self._connected = threading.Event()
-    self._ctx = Stream._make_ctx()
     self._ws_api = WebSocketClient(url, api_key,
                                    self._process_message,
                                    on_open=self._on_open,
@@ -222,23 +222,6 @@ class Stream:
   def _on_open(self, wsa):
     alog.info(f'[{self._name}] EODHD WebSocket connected')
     self._connected.set()
-
-  @staticmethod
-  def _make_ctx(**kwargs):
-    args = __class__.DEFAULT_CTX.copy()
-    args.update(**kwargs)
-
-    return pyu.make_object(**args)
-
-  def _new_ctx(self, **kwargs):
-    ctx = self._ctx
-    args = {k: getattr(ctx, k) for k in self.DEFAULT_CTX.keys()}
-    args.update(**kwargs)
-
-    nctx = pyu.make_object(**args)
-    self._ctx = nctx
-
-    return nctx
 
   def _reconnect(self):
     with self._lock:
