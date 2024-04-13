@@ -10,6 +10,7 @@ import orjson
 import pandas as pd
 from py_misc_utils import alog
 from py_misc_utils import assert_checks as tas
+from py_misc_utils import context_base as pycb
 from py_misc_utils import date_utils as pyd
 from py_misc_utils import fin_wrap as pyfw
 from py_misc_utils import pd_utils as pyp
@@ -177,7 +178,7 @@ class WebSocketClient:
     self._ws.send(f'{{"action":"auth","params":"{self._auth_key}"}}')
 
 
-class Stream:
+class Stream(pycb.ContextBase):
 
   DEFAULT_CTX = dict(
     handlers=dict(),
@@ -188,6 +189,7 @@ class Stream:
   SOCKET_BUFFER_SIZE = 8 * 1024 * 1024
 
   def __init__(self, api_key):
+    super().__init__(self.DEFAULT_CTX)
     self._api_key = api_key
     self._lock = threading.Lock()
     self._status_cv = threading.Condition(self._lock)
@@ -218,23 +220,6 @@ class Stream:
   def _has_status(self, status):
     with self._lock:
       return status in self._status
-
-  @staticmethod
-  def _make_ctx(**kwargs):
-    args = Stream.DEFAULT_CTX.copy()
-    args.update(**kwargs)
-
-    return pyu.make_object(**args)
-
-  def _new_ctx(self, **kwargs):
-    ctx = self._ctx
-    args = {k: getattr(ctx, k) for k in Stream.DEFAULT_CTX.keys()}
-    args.update(**kwargs)
-
-    nctx = pyu.make_object(**args)
-    self._ctx = nctx
-
-    return nctx
 
   def _reconnect(self):
     with self._lock:
