@@ -311,6 +311,7 @@ class Stream:
     ctx = self._ctx
     if ctx.handler is not None:
       data = orjson.loads(msg)
+      alog.info(f'STREAM: {data}')
       ctx.handler(self._marshal(data))
 
   def _register(self, symbols, handler):
