@@ -207,7 +207,8 @@ class Stream:
 
   SOCKET_BUFFER_SIZE = 8 * 1024 * 1024
 
-  def __init__(self, api_key, url, marshal):
+  def __init__(self, api_key, name, url, marshal):
+    self._name = name
     self._marshal = marshal
     self._lock = threading.Lock()
     self._connected = threading.Event()
@@ -219,7 +220,7 @@ class Stream:
                                    on_error=self._on_error)
 
   def _on_open(self, wsa):
-    alog.info(f'EODHD WebSocket connected')
+    alog.info(f'[{self._name}] EODHD WebSocket connected')
     self._connected.set()
 
   @staticmethod
@@ -241,7 +242,7 @@ class Stream:
 
   def _reconnect(self):
     with self._lock:
-      alog.info(f'Reconnecting EODHD WebSocket')
+      alog.info(f'[{self._name}] Reconnecting EODHD WebSocket')
 
       self._stop()
       self._start()
@@ -256,14 +257,14 @@ class Stream:
   def _start(self):
     ctx = self._ctx
     if not ctx.started:
-      alog.debug2(f'Starting EODHD WebSocket connection')
+      alog.debug2(f'[{self._name}] Starting EODHD WebSocket connection')
 
       # We bump up the WebSocket buffer size to avoid message traffic peaks to
       # cause back pressure on the server side, which will result in the server
       # dropping the connection.
       buffer_size = pyu.getenv('WEBSOCK_BUFSIZE', dtype=int,
                                defval=Stream.SOCKET_BUFFER_SIZE)
-      alog.debug0(f'Using WebSocket receive buffer of {buffer_size} bytes')
+      alog.debug0(f'[{self._name}] Using WebSocket receive buffer of {buffer_size} bytes')
 
       socket_options = (
         (socket.SOL_SOCKET, socket.SO_RCVBUF, buffer_size),
@@ -272,7 +273,7 @@ class Stream:
       self._ws_api.run_async(sockopt=socket_options)
       self._new_ctx(started=True)
 
-      alog.debug0(f'Waiting for EODHD WebSocket connection ...')
+      alog.debug0(f'[{self._name}] Waiting for EODHD WebSocket connection ...')
       self._connected.wait()
 
   def start(self):
@@ -282,7 +283,7 @@ class Stream:
   def _stop(self):
     ctx = self._ctx
     if ctx.started:
-      alog.debug2(f'Stopping EODHD WebSocket connection')
+      alog.debug2(f'[{self._name}] Stopping EODHD WebSocket connection')
       self._new_ctx(started=False)
       self._ws_api.close_connection()
       self._connected.clear()
@@ -293,7 +294,7 @@ class Stream:
 
   def _on_close(self, wsa, status, msg):
     ctx = self._ctx
-    alog.warning(f'Streaming connection closed: ({status}) {msg}')
+    alog.warning(f'[{self._name}] Streaming connection closed: ({status}) {msg}')
     if ctx.started:
       # Cannot do the reconnect work from inside the WebSocket callback. Just spawn
       # an async thread and do it from there. The WebSocket API will call the on-close
@@ -302,7 +303,7 @@ class Stream:
       pyu.run_async(pyu.xwrap_fn(self._reconnect))
 
   def _on_error(self, wsa, error):
-    alog.error(f'Streaming connection error: {error}')
+    alog.error(f'[{self._name}] Streaming connection error: {error}')
 
   def _process_message(self, wsa, msg):
     # Code within WebSocket callbacks should not take the lock. All the data needed
@@ -315,7 +316,7 @@ class Stream:
       if mdata is not None:
         ctx.handler(mdata)
       else:
-        alog.info(f'Stream Message: {data}')
+        alog.info(f'[{self._name}] Stream Message: {data}')
 
   def _register(self, symbols, handler):
     ctx = self._ctx
@@ -358,8 +359,8 @@ def _marshal_stream_quote(q):
 class MultiStream:
 
   STREAM_PARAMS = {
-    'trades': ('wss://ws.eodhistoricaldata.com/ws/us', _marshal_stream_trade),
-    'quotes': ('wss://ws.eodhistoricaldata.com/ws/us-quote', _marshal_stream_quote),
+    'trades': ('trades', 'wss://ws.eodhistoricaldata.com/ws/us', _marshal_stream_trade),
+    'quotes': ('quotes', 'wss://ws.eodhistoricaldata.com/ws/us-quote', _marshal_stream_quote),
   }
 
   def __init__(self, api_key):
