@@ -185,7 +185,7 @@ class WebSocketClient:
 
   def close_connection(self):
     self._ws.close()
-    if self._run_thread:
+    if self._run_thread is not None:
       self._run_thread.join()
 
   def subscribe(self, *symbols):
@@ -254,34 +254,38 @@ class Stream:
         self._register(ctx.ws_symbols, ctx.handler)
 
   def _start(self):
-    alog.debug2(f'Starting EODHD WebSocket connection')
+    ctx = self._ctx
+    if not ctx.started:
+      alog.debug2(f'Starting EODHD WebSocket connection')
 
-    # We bump up the WebSocket buffer size to avoid message traffic peaks to
-    # cause back pressure on the server side, which will result in the server
-    # dropping the connection.
-    buffer_size = pyu.getenv('WEBSOCK_BUFSIZE', dtype=int,
-                             defval=Stream.SOCKET_BUFFER_SIZE)
-    alog.debug0(f'Using WebSocket receive buffer of {buffer_size} bytes')
+      # We bump up the WebSocket buffer size to avoid message traffic peaks to
+      # cause back pressure on the server side, which will result in the server
+      # dropping the connection.
+      buffer_size = pyu.getenv('WEBSOCK_BUFSIZE', dtype=int,
+                               defval=Stream.SOCKET_BUFFER_SIZE)
+      alog.debug0(f'Using WebSocket receive buffer of {buffer_size} bytes')
 
-    socket_options = (
-      (socket.SOL_SOCKET, socket.SO_RCVBUF, buffer_size),
-    )
+      socket_options = (
+        (socket.SOL_SOCKET, socket.SO_RCVBUF, buffer_size),
+      )
 
-    self._ws_api.run_async(sockopt=socket_options)
-    self._new_ctx(started=True)
+      self._ws_api.run_async(sockopt=socket_options)
+      self._new_ctx(started=True)
+
+      alog.debug0(f'Waiting for EODHD WebSocket connection ...')
+      self._connected.wait()
 
   def start(self):
     with self._lock:
       self._start()
 
-    alog.debug0(f'Waiting for EODHD WebSocket connection ...')
-    self._connected.wait()
-
   def _stop(self):
-    alog.debug2(f'Stopping EODHD WebSocket connection')
-    self._new_ctx(started=False)
-    self._ws_api.close_connection()
-    self._connected.clear()
+    ctx = self._ctx
+    if ctx.started:
+      alog.debug2(f'Stopping EODHD WebSocket connection')
+      self._new_ctx(started=False)
+      self._ws_api.close_connection()
+      self._connected.clear()
 
   def stop(self):
     with self._lock:
@@ -346,25 +350,70 @@ def _marshal_stream_quote(q):
 class MultiStream:
 
   def __init__(self, api_key):
+    self._api_key = api_key
+    self._lock = threading.Lock()
+    self._started = False
     self._streams = dict()
-    self._streams['trades'] = Stream('wss://ws.eodhistoricaldata.com/ws/us', api_key,
-                                     _marshal_stream_trade)
-    self._streams['quotes'] = Stream('wss://ws.eodhistoricaldata.com/ws/us-quote', api_key,
-                                     _marshal_stream_quote)
+
+  def _ensure_stream(self, source):
+    stream = self._streams.get(source, None)
+    if stream is None:
+      if source == 'trades':
+        stream = Stream('wss://ws.eodhistoricaldata.com/ws/us', self._api_key,
+                        _marshal_stream_trade)
+      elif source == 'quotes':
+        stream = Stream('wss://ws.eodhistoricaldata.com/ws/us-quote', self._api_key,
+                        _marshal_stream_quote)
+
+      if stream is not None:
+        if self._started:
+          stream.start()
+
+        self._streams[source] = stream
+
+    return stream
+
+  def _start(self):
+    if not self._started:
+      for stream in self._streams.values():
+        stream.start()
+
+      self._started = True
 
   def start(self):
-    for stream in self._streams.values():
-      stream.start()
+    with self._lock:
+      self._start()
+
+  def _stop(self):
+    if self._started:
+      for stream in self._streams.values():
+        stream.stop()
+
+      self._started = False
 
   def stop(self):
-    for stream in self._streams.values():
-      stream.stop()
+    with self._lock:
+      self._stop()
 
   def register(self, symbols, handlers):
-    for source, handler in handlers.items():
-      stream = self._streams.get(source, None)
-      if stream is not None:
-        stream.register(symbols, handler)
+    with self._lock:
+      if not symbols:
+        if self._started:
+          for stream in self._streams.values():
+            stream.stop()
+
+        self._streams.clear()
+      else:
+        for source, handler in handlers.items():
+          stream = self._ensure_stream(source)
+          if stream is not None:
+            stream.register(symbols, handler)
+
+        for source, stream in tuple(self._streams.items()):
+          if source not in handlers:
+            if self._started:
+              stream.stop()
+            self._streams.pop(source)
 
 
 class API(api_base.API):
