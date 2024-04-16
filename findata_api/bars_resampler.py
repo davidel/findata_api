@@ -24,18 +24,13 @@ class BarsResampler:
 
   def __init__(self, reader, interval,
                buffer_size=None,
-               fields_map=None,
-               time_field=None):
+               fields_map=None):
     self._reader = reader
     self._interval = interval
     self._buffer_size = buffer_size or 10000
     self._fmap = _load_fields_map(fields_map or self._STD_FIELDS_MAP)
-    self._time_field = time_field or 't'
-    tas.check(self._time_field in self._fmap,
-              msg=f'Time field "{self._time_field}" not in field map {self._fmap}')
-
     self._wdata = self._reader.empty_array(self._buffer_size)
-    self._time_scan = stdf.StreamSortedScan(reader, self._fmap[self._time_field])
+    self._time_scan = stdf.StreamSortedScan(reader, self._fmap['t'])
     self._init()
 
   def _init(self):
@@ -123,8 +118,8 @@ class BarsResampler:
 
     nrecs, nproc = len(self._reader), 0
     for size, rdata in self._time_scan.scan():
-      t, symbol, o, h, l, c, v = self._load_data(rdata, self._time_field,
-                                                 'symbol', 'o', 'h', 'l', 'c', 'v')
+      t, symbol, o, h, l, c, v = self._load_data(rdata, 't', 'symbol', 'o',
+                                                 'h', 'l', 'c', 'v')
 
       for i in range(size):
         if mkf.filter(t[i]):
