@@ -7,12 +7,12 @@ from . import market_hours as mh
 
 class BarsResampler:
 
-  def __init__(self, reader, interval, buffer_size=None):
+  def __init__(self, reader, interval, buffer_size=None, time_field=None):
     self._reader = reader
     self._interval = interval
     self._buffer_size = buffer_size or 10000
     self._wdata = self._reader.empty_array(self._buffer_size)
-    self._time_scan = stdf.StreamSortedScan(reader, 't')
+    self._time_scan = stdf.StreamSortedScan(reader, time_field or 't')
     self._init()
 
   def _init(self):
