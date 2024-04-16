@@ -1,4 +1,5 @@
 import numpy as np
+from py_misc_utils import alog
 from py_misc_utils import assert_checks as tas
 from py_misc_utils import stream_dataframe as stdf
 from py_misc_utils import utils as pyu
@@ -126,7 +127,7 @@ class BarsResampler:
           self._feed(sdwriter, t[i], symbol[i], o[i], h[i], l[i], c[i], v[i])
 
       nproc += size
-      print(f'Processed {nproc}/{nrecs} ({100 * nproc / nrecs:.1f}%)')
+      alog.info(f'Processed {nproc}/{nrecs} ({100 * nproc / nrecs:.1f}%)')
 
     self._flush_symbols(sdwriter)
     self._write_data(sdwriter, force=True)
