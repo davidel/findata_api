@@ -1,18 +1,41 @@
 import numpy as np
+from py_misc_utils import assert_checks as tas
 from py_misc_utils import stream_dataframe as stdf
 from py_misc_utils import utils as pyu
 
 from . import market_hours as mh
 
 
+def _load_fields_map(fmstr):
+  fmap = dict()
+  for ff in pyu.comma_split(fmstr):
+    parts = pyu.resplit(ff, '=')
+    if len(parts) == 1:
+      fmap[parts[0]] = parts[0]
+    else:
+      fmap[parts[0]] = parts[1]
+
+  return fmap
+
+
 class BarsResampler:
 
-  def __init__(self, reader, interval, buffer_size=None, time_field=None):
+  _STD_FIELDS_MAP = 't,symbol,o,h,l,c,v'
+
+  def __init__(self, reader, interval,
+               buffer_size=None,
+               fields_map=None,
+               time_field=None):
     self._reader = reader
     self._interval = interval
     self._buffer_size = buffer_size or 10000
+    self._fmap = _load_fields_map(fields_map or self._STD_FIELDS_MAP)
+    self._time_field = time_field or 't'
+    tas.check(self._time_field in self._fmap,
+              msg=f'Time field "{self._time_field}" not in field map {self._fmap}')
+
     self._wdata = self._reader.empty_array(self._buffer_size)
-    self._time_scan = stdf.StreamSortedScan(reader, time_field or 't')
+    self._time_scan = stdf.StreamSortedScan(reader, self._fmap[self._time_field])
     self._init()
 
   def _init(self):
@@ -84,6 +107,14 @@ class BarsResampler:
       se.c = c
       se.v += v
 
+  def _load_data(self, rdata, *args):
+    data = []
+    for ff in args:
+      fm = self._fmap[ff]
+      data.append(rdata[fm])
+
+    return tuple(data)
+
   def resample(self, path):
     sdwriter = stdf.StreamDataWriter(self._reader.typed_fields(), path)
     mkf = mh.MarketTimeTracker()
@@ -92,13 +123,8 @@ class BarsResampler:
 
     nrecs, nproc = len(self._reader), 0
     for size, rdata in self._time_scan.scan():
-      t = rdata['t']
-      symbol = rdata['symbol']
-      o = rdata['o']
-      h = rdata['h']
-      l = rdata['l']
-      c = rdata['c']
-      v = rdata['v']
+      t, symbol, o, h, l, c, v = self._load_data(rdata, self._time_field,
+                                                 'symbol', 'o', 'h', 'l', 'c', 'v')
 
       for i in range(size):
         if mkf.filter(t[i]):
