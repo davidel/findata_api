@@ -65,17 +65,17 @@ def _enumerate_dataframe(path, dtype, args):
 
 
 def _enumerate_stream_dataframe(path, dtype, args):
+  alog.debug0(f'Loading stream DataFrame from {path}')
   reader = stdf.StreamDataReader(path)
 
   time_scan = stdf.StreamSortedScan(reader, 't',
                                     slice_size=args.get('slice_size', 10000))
-  for size, rdata in time_scan:
+  for size, rdata in time_scan.scan():
     symbol = rdata['symbol']
 
     sym_data = collections.defaultdict(lambda: collections.defaultdict(list))
     for i, sym in enumerate(symbol):
       symd = sym_data[sym]
-
       for field, data in rdata.items():
         symd[field].append(data[i])
 
