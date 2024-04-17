@@ -77,7 +77,9 @@ def _enumerate_stream_dataframe(path, dtype, args):
     times = rdata['t']
     ts = pyd.from_timestamp(times[0])
     te = pyd.from_timestamp(times[-1])
-    alog.warning(f'++++++++++++++++ {ts} ... {te}')
+    alog.warning(f'++++++++++++++++ {ts} ... {te}  ({len(times)})')
+    if np.max(times) > te:
+      alog.xraise(f'WOOOOOT {pyd.from_timestamp(np.max(times))} > {te}')
 
 
     sym_data = collections.defaultdict(lambda: collections.defaultdict(list))
