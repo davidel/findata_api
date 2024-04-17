@@ -72,21 +72,6 @@ def _enumerate_stream_dataframe(path, dtype, args):
                                     slice_size=args.get('slice_size', 10000))
   for size, rdata in time_scan.scan():
     symbol = rdata['symbol']
-
-
-    times = rdata['t']
-    ts = pyd.from_timestamp(times[0])
-    te = pyd.from_timestamp(times[-1])
-    alog.warning(f'++++++++++++++++ {ts} ... {te}  ({len(times)})')
-    if np.max(times) > times[-1]:
-      alog.xraise(f'WOOOOOT {pyd.from_timestamp(np.max(times))} > {te}')
-    mn = len(times) // 10
-    for n in range(0, len(times), mn):
-      xx = {field: data[n] for field, data in rdata.items()}
-      alog.warning(f'[{n}] ******** {xx}')
-
-
-
     sym_data = collections.defaultdict(lambda: collections.defaultdict(list))
     for i, sym in enumerate(symbol):
       symd = sym_data[sym]
