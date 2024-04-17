@@ -73,6 +73,13 @@ def _enumerate_stream_dataframe(path, dtype, args):
   for size, rdata in time_scan.scan():
     symbol = rdata['symbol']
 
+
+    times = rdata['t']
+    ts = pyd.from_timestamp(times[0])
+    te = pyd.from_timestamp(times[-1])
+    alog.warning(f'++++++++++++++++ {ts} ... {te}')
+
+
     sym_data = collections.defaultdict(lambda: collections.defaultdict(list))
     for i, sym in enumerate(symbol):
       symd = sym_data[sym]
@@ -98,11 +105,9 @@ def _enumerate_stream_dataframe(path, dtype, args):
 
 def _enumerate_symbars(path, dtype, args):
   if os.path.isfile(path):
-    for dfs in _enumerate_dataframe(path, dtype, args):
-      yield dfs
+    yield from _enumerate_dataframe(path, dtype, args):
   elif os.path.isdir(path):
-    for dfs in _enumerate_stream_dataframe(path, dtype, args):
-      yield dfs
+    yield from _enumerate_stream_dataframe(path, dtype, args):
   else:
     alog.xraise(f'Missing or unrecognized file format: {path}')
 
