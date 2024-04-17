@@ -78,7 +78,7 @@ def _enumerate_stream_dataframe(path, dtype, args):
     ts = pyd.from_timestamp(times[0])
     te = pyd.from_timestamp(times[-1])
     alog.warning(f'++++++++++++++++ {ts} ... {te}  ({len(times)})')
-    if np.max(times) > te:
+    if np.max(times) > times[-1]:
       alog.xraise(f'WOOOOOT {pyd.from_timestamp(np.max(times))} > {te}')
 
 
