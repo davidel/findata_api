@@ -367,7 +367,7 @@ class API(api_base.TradeAPI):
     prices = dict()
     for sym, sdf in bars.items():
       times = sdf['t'].to_numpy()
-      if times:
+      if len(times) > 0:
         ilast = np.argmax(times)
         cdata = sdf.get(f'{sym}.c', None)
         if cdata is None:
