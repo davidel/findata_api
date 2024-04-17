@@ -98,9 +98,11 @@ def _enumerate_stream_dataframe(path, dtype, args):
 
 def _enumerate_symbars(path, dtype, args):
   if os.path.isfile(path):
-    yield from _enumerate_dataframe(path, dtype, args)
+    for dfs in _enumerate_dataframe(path, dtype, args):
+      yield dfs
   elif os.path.isdir(path):
-    yield from _enumerate_stream_dataframe(path, dtype, args)
+    for dfs in _enumerate_stream_dataframe(path, dtype, args):
+      yield dfs
   else:
     alog.xraise(f'Missing or unrecognized file format: {path}')
 
