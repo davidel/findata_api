@@ -83,7 +83,7 @@ def create_api(name=None, create=False, args=None):
     api = mod.create_api(_merged_args(_ARGS, args))
   else:
     with _LOCK:
-      api = _API_CACHE.get(name, None)
+      api = _API_CACHE.get(name)
       if api is None:
         api = mod.create_api(_ARGS)
         _API_CACHE[name] = api

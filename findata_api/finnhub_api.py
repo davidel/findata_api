@@ -43,7 +43,7 @@ _DATA_STEPS = {
 
 
 def _map_data_step(data_step):
-  step = _DATA_STEPS.get(data_step.lower(), None)
+  step = _DATA_STEPS.get(data_step.lower())
   if not step:
     alog.xraise(RuntimeError, f'Unknown data step: {data_step}')
 

@@ -169,17 +169,17 @@ class Stream:
   async def _stream_handler(self, d):
     handlers = self._handlers
 
-    kind = d.get('T', None)
+    kind = d.get('T')
     if kind == 'q':
-      handler = handlers.get('quotes', None)
+      handler = handlers.get('quotes')
       if handler is not None:
         handler(_marshal_stream_quote(d))
     elif kind == 't':
-      handler = handlers.get('trades', None)
+      handler = handlers.get('trades')
       if handler is not None:
         handler(_marshal_stream_trade(d))
     elif kind == 'b':
-      handler = handlers.get('bars', None)
+      handler = handlers.get('bars')
       if handler is not None:
         handler(_marshal_stream_bar(d))
 

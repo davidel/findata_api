@@ -175,7 +175,7 @@ class API(api_base.TradeAPI):
 
   # Requires lock!
   def _try_fill(self, order_id, symbol, quantity, side, type, limit, stop):
-    price = self._prices.get(symbol, None)
+    price = self._prices.get(symbol)
     tas.check_is_not_none(price, msg=f'Missing price information for symbol: {symbol}')
 
     if side == 'buy':
@@ -233,7 +233,7 @@ class API(api_base.TradeAPI):
 
   def _try_fill_order(self, order_id):
     with self._lock:
-      order = self._orders.get(order_id, None)
+      order = self._orders.get(order_id)
       if order is not None and order.status not in {'filled', 'truncated'}:
         filled_quantity, price = self._try_fill(order_id,
                                                 order.symbol,
@@ -300,7 +300,7 @@ class API(api_base.TradeAPI):
 
   def get_order(self, oid):
     with self._lock:
-      order = self._orders.get(oid, None)
+      order = self._orders.get(oid)
 
     return _marshal_order(order) if order is not None else None
 
@@ -335,7 +335,7 @@ class API(api_base.TradeAPI):
 
   def cancel_order(self, oid):
     with self._lock:
-      order = self._orders.get(oid, None)
+      order = self._orders.get(oid)
       if order is not None and order.status in {'new', 'partially_filled'}:
         self._orders[oid] = pyu.new_with(order, status='canceled')
 
@@ -352,14 +352,14 @@ class API(api_base.TradeAPI):
 
   def handle_trade(self, t):
     with self._lock:
-      price = self._prices.get(t.symbol, None)
+      price = self._prices.get(t.symbol)
       if price is None or t.timestamp > price.timestamp:
         self._prices[t.symbol] = Price(price=t.price, timestamp=t.timestamp)
         self.scheduler.timegen.set_time(t.timestamp)
 
   def handle_bar(self, b):
     with self._lock:
-      price = self._prices.get(b.symbol, None)
+      price = self._prices.get(b.symbol)
       if price is None or b.timestamp > price.timestamp:
         self._prices[b.symbol] = Price(price=b.close, timestamp=b.timestamp)
         self.scheduler.timegen.set_time(b.timestamp)
@@ -370,7 +370,7 @@ class API(api_base.TradeAPI):
       times = sdf['t'].to_numpy()
       if len(times) > 0:
         ilast = np.argmax(times)
-        cdata = sdf.get(f'{sym}.c', None)
+        cdata = sdf.get(f'{sym}.c')
         if cdata is None:
           cdata = sdf['c']
         close_prices = cdata.to_numpy()
@@ -380,7 +380,7 @@ class API(api_base.TradeAPI):
     current_time = -1
     with self._lock:
       for sym, bprice in prices.items():
-        price = self._prices.get(sym, None)
+        price = self._prices.get(sym)
         if price is None or bprice.timestamp > price.timestamp:
           self._prices[sym] = bprice
           current_time = max(bprice.timestamp, current_time)

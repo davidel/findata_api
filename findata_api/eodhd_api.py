@@ -146,7 +146,7 @@ def _enumerate_ranges(start_date, end_date, data_step):
 def _time_request_params(start_date, end_date, data_step):
   mstep = _map_data_step(data_step)
 
-  period = _EOD_STEPS.get(mstep, None)
+  period = _EOD_STEPS.get(mstep)
   if period is not None:
     return {
       'api_kind': 'eod',
@@ -322,7 +322,7 @@ def _get_stream_ts(v):
 
 
 def _marshal_stream_trade(t):
-  ts = t.get('t', None)
+  ts = t.get('t')
   if ts is not None:
     return api_types.StreamTrade(timestamp=_get_stream_ts(ts),
                                  symbol=t['s'],
@@ -331,7 +331,7 @@ def _marshal_stream_trade(t):
 
 
 def _marshal_stream_quote(q):
-  ts = q.get('t', None)
+  ts = q.get('t')
   if ts is not None:
     return api_types.StreamQuote(timestamp=_get_stream_ts(ts),
                                  symbol=q['s'],
@@ -354,9 +354,9 @@ class MultiStream:
     self._streams = dict()
 
   def _ensure_stream(self, source):
-    stream = self._streams.get(source, None)
+    stream = self._streams.get(source)
     if stream is None:
-      sparams = self.STREAM_PARAMS.get(source, None)
+      sparams = self.STREAM_PARAMS.get(source)
       if sparams is not None:
         stream = Stream(self._api_key, *sparams)
 

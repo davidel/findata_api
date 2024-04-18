@@ -87,7 +87,7 @@ class BarsResampler:
       self._flush_symbols(sdwriter)
       self._btime = self._bar_time(t)
 
-    se = self._symbols.get(symbol, None)
+    se = self._symbols.get(symbol)
     if se is None:
       se = pyu.make_object(t=self._bar_time(t),
                            symbol=symbol,

@@ -232,7 +232,7 @@ class StreamComputer:
       # Use the end time of the bar as timestamp
       ts = (int(x.timestamp) // self._bar_interval) * self._bar_interval + self._bar_interval
       with self._lock:
-        cbar = abars.get(x.symbol, None)
+        cbar = abars.get(x.symbol)
         if cbar is None or ts >= cbar.bar.timestamp:
           if cbar is not None:
             bars[x.symbol].add(cbar.bar.flush())
@@ -254,7 +254,7 @@ class StreamComputer:
         volume_interval = volume_interval[t.symbol]
       volume = t.price * t.quantity
       with self._lock:
-        cbar = self._active_trade_bars.get(t.symbol, None)
+        cbar = self._active_trade_bars.get(t.symbol)
         if cbar is None or (cbar.volume + volume) > volume_interval:
           if cbar is not None:
             self._trade_bars[t.symbol].add(cbar.bar.flush())

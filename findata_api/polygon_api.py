@@ -123,11 +123,11 @@ def _marshal_stream_bar(b):
 def _sublist(symbols, handlers):
   sub = []
   for sym in symbols:
-    if handlers.get('trades', None) is not None:
+    if handlers.get('trades') is not None:
       sub.append(f'T.{sym}')
-    if handlers.get('quotes', None) is not None:
+    if handlers.get('quotes') is not None:
       sub.append(f'Q.{sym}')
-    if handlers.get('bars', None) is not None:
+    if handlers.get('bars') is not None:
       sub.append(f'A.{sym}')
 
   return sub
@@ -206,7 +206,7 @@ class Stream(pycb.ContextBase):
       if status not in self._status:
         self._status_cv.wait()
 
-      return self._status.get(status, None)
+      return self._status.get(status)
 
   def _set_status(self, status, msg, append=True):
     with self._status_cv:
@@ -288,23 +288,23 @@ class Stream(pycb.ContextBase):
 
     data = orjson.loads(msg)
     for d in data:
-      kind = d.get('ev', None)
+      kind = d.get('ev')
       if kind == 'Q':
-        handler = ctx.handlers.get('quotes', None)
+        handler = ctx.handlers.get('quotes')
         if handler is not None:
           handler(_marshal_stream_quote(d))
       elif kind == 'T':
-        handler = ctx.handlers.get('trades', None)
+        handler = ctx.handlers.get('trades')
         if handler is not None:
           handler(_marshal_stream_trade(d))
       elif kind[0] == 'A':
-        handler = ctx.handlers.get('bars', None)
+        handler = ctx.handlers.get('bars')
         if handler is not None:
           handler(_marshal_stream_bar(d))
       elif kind == 'status':
         alog.debug2(f'Status Message: {d}')
 
-        status = d.get('status', None)
+        status = d.get('status')
         if status == 'auth_success':
           self._set_status('AUTHENTICATED', d.get('message', ''))
         elif status == 'connected':

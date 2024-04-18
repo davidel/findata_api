@@ -82,7 +82,7 @@ def normalize_columns(cols=None, df=None):
   for c in cols:
     sym, field = split_field(c)
     if sym and field:
-      sid = symbols.get(sym, None)
+      sid = symbols.get(sym)
       if sid is None:
         sid = f'S{len(symbols)}'
         symbols[sym] = sid

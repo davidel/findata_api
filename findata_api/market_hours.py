@@ -56,10 +56,10 @@ class MarketTimeTracker:
 
   def _market_times(self, dt):
     ds = _norm_timestamp(dt)
-    times = self._tdb.get(ds, None)
+    times = self._tdb.get(ds)
     if times is None:
       self._prefetch(dt)
-      times = self._tdb.get(ds, None)
+      times = self._tdb.get(ds)
       if times is None:
         self._tdb[ds] = ()
 

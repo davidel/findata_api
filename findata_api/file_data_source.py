@@ -28,7 +28,7 @@ def _enumerate_dataframe(path, dtype, args):
 
   splits = np.append(pyn.group_splits(stimes, lambda x: x != 0) + 1, len(stimes))
 
-  symbols = cdata.get('symbol', None)
+  symbols = cdata.get('symbol')
 
   base = 0
   for st in splits:

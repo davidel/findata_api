@@ -180,8 +180,8 @@ class Estimator:
     conf = Estimator._load_config(path)
 
     return Estimator(trades_stg=trades_stg,
-                     trades_window=conf.get('trades_window', None),
-                     trades_time_scaler=conf.get('trades_time_scaler', None),
+                     trades_window=conf.get('trades_window'),
+                     trades_time_scaler=conf.get('trades_time_scaler'),
                      trades_indices=trades_indices)
 
 

@@ -58,7 +58,7 @@ def _parse_datetime(s):
 
 def _data_issue_request(func, **kwargs):
   dtype = kwargs.pop('dtype', np.float32)
-  symbol = kwargs.get('symbol', None)
+  symbol = kwargs.get('symbol')
 
   rresp = _issue_request(func, **kwargs)
   if rresp is not None:
