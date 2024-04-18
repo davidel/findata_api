@@ -78,6 +78,7 @@ class TimeGen(pytg.TimeGen):
   Wait = pykw.key_wrap('Wait', 'wakeup_time')
 
   def __init__(self):
+    super().__init__()
     self._lock = threading.Lock()
     self._time = 0
     self._waits = []
@@ -376,7 +377,7 @@ class API(api_base.TradeAPI):
         prices[sym] = Price(price=float(close_prices[ilast]),
                             timestamp=times[ilast])
 
-    current_time = 0
+    current_time = -1
     with self._lock:
       for sym, bprice in prices.items():
         price = self._prices.get(sym, None)
@@ -384,6 +385,6 @@ class API(api_base.TradeAPI):
           self._prices[sym] = bprice
           current_time = max(bprice.timestamp, current_time)
 
-    if current_time:
+    if current_time > 0:
       self.scheduler.timegen.set_time(current_time)
 
