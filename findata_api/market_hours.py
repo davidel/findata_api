@@ -22,19 +22,19 @@ class MarketTimeTracker:
   def _load_range(self, dt):
     delta = datetime.timedelta(days=60)
     if self._range_start is None:
-      self._range_start, self._range_end = _noon(dt - delta), _noon(dt + delta)
+      self._range_start, self._range_end = _norm_time(dt - delta), _norm_time(dt + delta)
 
       return self._range_start, self._range_end
 
     if dt < self._range_start:
       end_range = self._range_start
-      self._range_start = _noon(dt - delta)
+      self._range_start = _norm_time(dt - delta)
 
       return self._range_start, end_range
 
     if dt > self._range_end:
       start_range = self._range_end
-      self._range_end = _noon(dt + delta)
+      self._range_end = _norm_time(dt + delta)
 
       return start_range, self._range_end
 
@@ -143,14 +143,14 @@ def _ktime(dt):
   return dt.strftime('%Y-%m-%d')
 
 
-def _noon(dt):
-  return dt.replace(hour=12, minute=0, second=0, microsecond=0)
+def _norm_time(dt):
+  return pyd.at_time(dt, hour=12)
 
 
 def _norm_timestamp(dt):
   # Use noon as reference time for midnight rounding. This only differs during
   # DST change days. The 43200 is the number of seconds from midnight to noon.
-  return round(_noon(dt).timestamp()) - 43200
+  return round(_norm_time(dt).timestamp()) - 43200
 
 
 def market_hours(dt, market=None):
