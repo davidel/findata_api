@@ -130,5 +130,5 @@ class Splits:
             for c in cols:
               rwdata[c][idx] *= factor
 
-    return pd.DataFrame(data=rwdata) if isinstance(data, pd.DataFrame) else rwdata
+    return pd.DataFrame(data=rwdata, copy=False) if isinstance(data, pd.DataFrame) else rwdata
 
