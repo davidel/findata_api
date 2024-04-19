@@ -96,6 +96,12 @@ class Splits:
 
     return factor
 
+  # The sequencer() API returns a Sequencer() object whose factor() API must
+  # be used with monotonically increasing timestamps in order to work.
+  # This is faster than calling the Splits.factor() API, but has such constraint
+  # to be complied with. One particular use of this API is during dataset
+  # transformations, where one can scan records ordered by timestamp and apply
+  # the resulting factors to unadjusted prices.
   def sequencer(self, symbol):
     slist = self._splits.get(symbol)
 
