@@ -68,6 +68,14 @@ def _enumerate_stream_dataframe(path, dtype, args):
   alog.debug0(f'Loading stream DataFrame from {path}')
   reader = stdf.StreamDataReader(path)
 
+  if dtype is not None:
+    if isinstance(dtype, dict):
+      dtype = dtype.copy()
+    else:
+      dtype = {c: dtype for c in ('o', 'h', 'l', 'c', 'v')}
+
+    dtype['t'] = np.int64
+
   time_scan = stdf.StreamSortedScan(reader, 't',
                                     slice_size=args.get('slice_size', 10000))
   for size, rdata in time_scan.scan():
@@ -83,11 +91,6 @@ def _enumerate_stream_dataframe(path, dtype, args):
       df = pd.DataFrame(data=sdata)
 
       if dtype is not None:
-        if not isinstance(dtype, dict):
-          ddtype = {c: dtype for c in ('o', 'h', 'l', 'c', 'v')}
-          ddtype['t'] = np.int64
-          dtype = ddtype
-
         df = pyp.type_convert_dataframe(df, dtype)
 
       dfs[sym] = df
