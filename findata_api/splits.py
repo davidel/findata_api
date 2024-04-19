@@ -2,7 +2,9 @@ import collections
 import bisect
 
 import numpy as np
+import pandas as pd
 from py_misc_utils import date_utils as pyd
+from py_misc_utils import np_utils as pyn
 from py_misc_utils import pd_utils as pyp
 from py_misc_utils import utils as pyu
 
@@ -106,4 +108,27 @@ class Splits:
     slist = self._splits.get(symbol)
 
     return Sequencer(tuple(slist)) if slist else SequencerBase()
+
+  def rewrite_data(self, data, *cols, timecol=None, symcol=None):
+    if isinstance(data, pd.DataFrame):
+      rwdata = pyp.to_npdict(data)
+    else:
+      rwdata = pyn.npdict_clone(data)
+
+    timecol = timecol or 't'
+    symcol = symcol or 'symbol'
+
+    times = rwdata[timecol]
+
+    usym = pyu.unique(rwdata[symcol])
+    for sym, symidx in usym.items():
+      if self.has_splits(sym):
+        for idx in symidx:
+          dt = pyd.from_timestamp(times[idx])
+          factor = self.factor(sym, dt)
+          if factor != 1.0:
+            for c in cols:
+              rwdata[c][idx] *= factor
+
+    return pd.DataFrame(data=rwdata) if isinstance(data, pd.DataFrame) else rwdata
 
