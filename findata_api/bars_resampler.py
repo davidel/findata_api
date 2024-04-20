@@ -1,10 +1,12 @@
 import numpy as np
 from py_misc_utils import alog
 from py_misc_utils import assert_checks as tas
+from py_misc_utils import date_utils as pyd
 from py_misc_utils import stream_dataframe as stdf
 from py_misc_utils import utils as pyu
 
 from . import market_hours as mh
+from . import splits as spl
 
 
 def _load_fields_map(fmstr):
@@ -25,11 +27,13 @@ class BarsResampler:
 
   def __init__(self, reader, interval,
                buffer_size=None,
-               fields_map=None):
+               fields_map=None,
+               splits_path=None):
     self._reader = reader
     self._interval = interval
     self._buffer_size = buffer_size or 10000
     self._fmap = _load_fields_map(fields_map or self._STD_FIELDS_MAP)
+    self._splits = spl.Splits(splits_path) if splits_path is not None else None
     self._wdata = self._reader.empty_array(self._buffer_size)
     self._time_scan = stdf.StreamSortedScan(reader, self._fmap['t'])
     self._init()
@@ -64,8 +68,21 @@ class BarsResampler:
       self._write(sdwriter, wdata)
       self._widx = 0
 
+  def _splits_rewrite(self, se):
+    if self._splits is not None:
+      factor = self._splits.factor(se.symbol, pyd.from_timestamp(se.t))
+      se.c *= factor
+      se.h *= factor
+      se.l *= factor
+      se.o *= factor
+      se.v /= factor
+
+    return se
+
   def _write_symbol(self, se, sdwriter):
     self._write_data(sdwriter)
+
+    se = self._splits_rewrite(se)
 
     widx = self._widx
     for field, data in self._wdata.items():
