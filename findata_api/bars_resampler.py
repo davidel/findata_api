@@ -71,11 +71,11 @@ class BarsResampler:
   def _splits_rewrite(self, se):
     if self._splits is not None:
       factor = self._splits.factor(se.symbol, pyd.from_timestamp(se.t))
-      se.c *= factor
-      se.h *= factor
-      se.l *= factor
-      se.o *= factor
-      se.v /= factor
+      se.c /= factor
+      se.h /= factor
+      se.l /= factor
+      se.o /= factor
+      se.v *= factor
 
     return se
 
