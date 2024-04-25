@@ -103,7 +103,7 @@ class OrderTracker:
       while self._orders and flushed:
         wait_time = atimeo.get()
         if wait_time is None or wait_time > 0:
-          timegen.wait(self._pending_cv, timeout=wait_time)
+          flushed = timegen.wait(self._pending_cv, timeout=wait_time)
         else:
           flushed = False
 
