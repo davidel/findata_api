@@ -256,7 +256,7 @@ class API(api_base.TradeAPI):
                                                 filled_avg_price=avg_price)
           if current_fill < order.quantity:
             self.scheduler.enter(self._fill_delay, self._try_fill_order,
-                                  ref=self._schedref, argument=(order_id,))
+                                 ref=self._schedref, argument=(order_id,))
         else:
           self._orders[order_id] = pyu.new_with(order, status='truncated')
 
