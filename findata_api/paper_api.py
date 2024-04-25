@@ -73,7 +73,7 @@ Order = collections.namedtuple(
 Position = collections.namedtuple('Position', 'symbol, quantity, price, timestamp, order_id')
 
 
-class TimeGen(pytg.TimeGen):
+class TimeGen:
 
   Wait = pykw.key_wrap('Wait', 'wakeup_time')
 
