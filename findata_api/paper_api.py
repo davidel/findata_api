@@ -294,7 +294,7 @@ class API(api_base.TradeAPI):
 
       if filled_quantity < quantity:
         self.scheduler.enter(self._fill_delay, self._try_fill_order,
-                              ref=self._schedref, argument=(order.id,))
+                             ref=self._schedref, argument=(order.id,))
 
     return _marshal_order(order)
 
