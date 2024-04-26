@@ -3,6 +3,7 @@ import threading
 
 from py_misc_utils import abs_timeout as pyat
 from py_misc_utils import alog
+from py_misc_utils import cond_waiter as pycw
 from py_misc_utils import scheduler as sch
 from py_misc_utils import utils as pyu
 
@@ -82,30 +83,20 @@ class OrderTracker:
       self.api.cancel_order(order_id)
 
   def wait(self, order_id, timeout=None):
-    timegen = self.scheduler.timegen
-    atimeo = pyat.AbsTimeout(timeout, timefn=timegen.now)
+    waiter = pycw.CondWaiter(timeout=timeout, timegen=self.scheduler.timegen)
     with self._lock:
       completed = True
-      while order_id in self._orders:
-        wait_time = atimeo.get()
-        if wait_time is None or wait_time > 0:
-          timegen.wait(self._pending_cv, timeout=wait_time)
-        else:
-          completed = False
+      while order_id in self._orders and completed:
+        completed = waiter.wait(self._pending_cv)
 
       return completed
 
   def wait_all(self, timeout=None):
-    timegen = self.scheduler.timegen
-    atimeo = pyat.AbsTimeout(timeout, timefn=timegen.now)
+    waiter = pycw.CondWaiter(timeout=timeout, timegen=self.scheduler.timegen)
     with self._lock:
       flushed = True
       while self._orders and flushed:
-        wait_time = atimeo.get()
-        if wait_time is None or wait_time > 0:
-          flushed = timegen.wait(self._pending_cv, timeout=wait_time)
-        else:
-          flushed = False
+        flushed = waiter.wait(self._pending_cv)
 
       return flushed
 

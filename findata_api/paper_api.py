@@ -88,6 +88,9 @@ class TimeGen:
 
   def wait(self, cond, timeout=None):
     if timeout is not None:
+      if timeout <= 0:
+        return False
+
       with self._lock:
         wakeup_time = self._time + timeout
         wait = self.Wait(wakeup_time, cond=cond, expired=False)
