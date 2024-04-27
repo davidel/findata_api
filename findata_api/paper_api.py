@@ -68,8 +68,9 @@ def _marshal_position(p):
 Price = collections.namedtuple('Price', 'price, timestamp')
 Order = collections.namedtuple(
   'Order',
-  'id, symbol, quantity, side, type, limit, stop, status, created, filled, ' \
-  'filled_quantity, filled_avg_price')
+  'id, symbol, quantity, side, type, created, filled, filled_avg_price, ' \
+  'filled_quantity, status, limit, stop, ref_price',
+  defaults=(0, 0, 'new', None, None, None))
 Position = collections.namedtuple('Position', 'symbol, quantity, price, timestamp, order_id')
 
 
@@ -140,6 +141,7 @@ class API(api_base.TradeAPI):
     self._prices = dict()
     self._orders = dict()
     self._positions = collections.defaultdict(list)
+    self._stops = collections.defaultdict(list)
     self._order_id = 1
 
   def _get_state(self, state):
@@ -177,7 +179,7 @@ class API(api_base.TradeAPI):
     return pyd.from_timestamp(self.scheduler.timegen.now())
 
   # Requires lock!
-  def _try_fill(self, order_id, symbol, quantity, side, type, limit, stop):
+  def _try_fill(self, order_id, symbol, quantity, side, type):
     price = self._prices.get(symbol)
     tas.check_is_not_none(price, msg=f'Missing price information for symbol: {symbol}')
 
@@ -213,8 +215,7 @@ class API(api_base.TradeAPI):
           break
 
       # Make sure we pop in reverse order to keep indices valid.
-      changes.reverse()
-      for i, np in changes:
+      for i, np in reversed(changes):
         if np is None:
           positions.pop(i)
         else:
@@ -243,9 +244,7 @@ class API(api_base.TradeAPI):
                                                 self._fill_quantity(order.quantity,
                                                                     order.filled_quantity),
                                                 order.side,
-                                                order.type,
-                                                order.limit,
-                                                order.stop)
+                                                order.type)
 
         if filled_quantity:
           current_fill = order.filled_quantity + filled_quantity
@@ -263,41 +262,79 @@ class API(api_base.TradeAPI):
         else:
           self._orders[order_id] = pyu.new_with(order, status='truncated')
 
+  def _submit_stop_order(self, symbol, quantity, side, type, stop):
+    price = self._prices.get(symbol)
+    now = self.now()
+
+    order = Order(id=self._order_id,
+                  symbol=symbol,
+                  quantity=quantity,
+                  side=side,
+                  type=type,
+                  stop=stop,
+                  created=now,
+                  filled=now,
+                  ref_price=price.price)
+
+    self._stops[symbol].append(order)
+    self._order_id += 1
+
+    return order
+
+  def _check_stops_ready(self, symbol, price):
+    stops, ready = self._stops.get(symbol, []), []
+    for i, order in enumerate(stops):
+      if order.ref_price > order.stop:
+        if order.stop >= price:
+          ready.append(i)
+      else:
+        if price >= order.stop:
+          ready.append(i)
+
+    for i in reversed(ready):
+      order = stops[i]
+      stops.pop(i)
+      self.scheduler.enter(self._fill_delay, self._try_fill_order,
+                           ref=self._schedref, argument=(order.id,))
+
+  def _submit_order(self, symbol, quantity, side, type):
+    filled_quantity, price = self._try_fill(self._order_id,
+                                            symbol,
+                                            self._fill_quantity(quantity, 0),
+                                            side,
+                                            type)
+
+    now = self.now()
+    status = 'filled' if filled_quantity == quantity else 'partially_filled'
+    order = Order(id=self._order_id,
+                  symbol=symbol,
+                  quantity=quantity,
+                  side=side,
+                  type=type,
+                  status=status,
+                  created=now,
+                  filled=now,
+                  filled_quantity=filled_quantity,
+                  filled_avg_price=price.price)
+
+    self._orders[self._order_id] = order
+    self._order_id += 1
+
+    if filled_quantity < quantity:
+      self.scheduler.enter(self._fill_delay, self._try_fill_order,
+                           ref=self._schedref, argument=(order.id,))
+
+    return order
+
   def submit_order(self, symbol, quantity, side, type='market', limit=None, stop=None):
     tas.check_eq(type, 'market', msg=f'Order type not supported: type={type}')
     tas.check_is_none(limit, msg=f'Limit orders not supported: limit={limit}')
-    tas.check_is_none(stop, msg=f'Stop orders not supported: stop={stop}')
 
     with self._lock:
-      filled_quantity, price = self._try_fill(self._order_id,
-                                              symbol,
-                                              self._fill_quantity(quantity, 0),
-                                              side,
-                                              type,
-                                              limit,
-                                              stop)
-
-      now = self.now()
-      status = 'filled' if filled_quantity == quantity else 'partially_filled'
-      order = Order(id=self._order_id,
-                    symbol=symbol,
-                    quantity=quantity,
-                    side=side,
-                    type=type,
-                    limit=limit,
-                    stop=stop,
-                    status=status,
-                    created=now,
-                    filled=now,
-                    filled_quantity=filled_quantity,
-                    filled_avg_price=price.price)
-
-      self._orders[self._order_id] = order
-      self._order_id += 1
-
-      if filled_quantity < quantity:
-        self.scheduler.enter(self._fill_delay, self._try_fill_order,
-                             ref=self._schedref, argument=(order.id,))
+      if stop is not None:
+        order = self._submit_stop_order(symbol, quantity, side, type, stop)
+      else:
+        order = self._submit_order(symbol, quantity, side, type)
 
     return _marshal_order(order)
 
@@ -330,6 +367,12 @@ class API(api_base.TradeAPI):
             self._match_status(order, status)):
           orders.append(order)
 
+      for stops in self._stops.values():
+        for order in stops:
+          if (order.created > start_date and order.created < end_date and
+              self._match_status(order, status)):
+            orders.append(order)
+
     orders = sorted(orders, key=lambda o: o.created)
     if limit is not None:
       orders = orders[-limit:]
@@ -360,12 +403,16 @@ class API(api_base.TradeAPI):
         self._prices[t.symbol] = Price(price=t.price, timestamp=t.timestamp)
         self.scheduler.timegen.set_time(t.timestamp)
 
+        self._check_stops_ready(t.symbol, t.price)
+
   def handle_bar(self, b):
     with self._lock:
       price = self._prices.get(b.symbol)
       if price is None or b.timestamp > price.timestamp:
         self._prices[b.symbol] = Price(price=b.close, timestamp=b.timestamp)
         self.scheduler.timegen.set_time(b.timestamp)
+
+        self._check_stops_ready(b.symbol, b.close)
 
   def handle_symbars(self, bars):
     prices = dict()
@@ -387,6 +434,8 @@ class API(api_base.TradeAPI):
         if price is None or bprice.timestamp > price.timestamp:
           self._prices[sym] = bprice
           current_time = max(bprice.timestamp, current_time)
+
+          self._check_stops_ready(sym, bprice.price)
 
     if current_time > 0:
       self.scheduler.timegen.set_time(current_time)
