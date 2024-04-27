@@ -294,6 +294,7 @@ class API(api_base.TradeAPI):
     for i in reversed(ready):
       order = stops[i]
       stops.pop(i)
+      alog.debug0(f'Stop order triggered: {order}')
       self.scheduler.enter(self._fill_delay, self._try_fill_order,
                            ref=self._schedref, argument=(order.id,))
 
