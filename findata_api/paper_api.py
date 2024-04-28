@@ -235,6 +235,10 @@ class API(api_base.TradeAPI):
 
     return min(qleft, qpct)
 
+  def _schedule_fill(self, order_id):
+    self.scheduler.enter(self._fill_delay, self._try_fill_order,
+                         ref=self._schedref, argument=(order_id,))
+
   def _try_fill_order(self, order_id):
     with self._lock:
       order = self._orders.get(order_id)
@@ -257,8 +261,7 @@ class API(api_base.TradeAPI):
                                                 status=status,
                                                 filled_avg_price=avg_price)
           if current_fill < order.quantity:
-            self.scheduler.enter(self._fill_delay, self._try_fill_order,
-                                 ref=self._schedref, argument=(order_id,))
+            self._schedule_fill(order_id)
         else:
           self._orders[order_id] = pyu.new_with(order, status='truncated')
 
@@ -295,8 +298,7 @@ class API(api_base.TradeAPI):
 
       stops.pop(i)
 
-      self.scheduler.enter(self._fill_delay, self._try_fill_order,
-                           ref=self._schedref, argument=(order.id,))
+      self._schedule_fill(order.id)
 
   def _submit_order(self, symbol, quantity, side, type):
     filled_quantity, price = self._try_fill(self._order_id,
@@ -322,8 +324,7 @@ class API(api_base.TradeAPI):
     self._order_id += 1
 
     if filled_quantity < quantity:
-      self.scheduler.enter(self._fill_delay, self._try_fill_order,
-                           ref=self._schedref, argument=(order.id,))
+      self._schedule_fill(order.id)
 
     return order
 
