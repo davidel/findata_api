@@ -276,25 +276,25 @@ class API(api_base.TradeAPI):
                   filled=now,
                   ref_price=price.price)
 
-    self._stops[symbol].append(order)
+    self._orders[order.id] = order
     self._order_id += 1
+    self._stops[symbol].append(order)
 
     return order
 
   def _check_stops_ready(self, symbol, price):
     stops, ready = self._stops.get(symbol, []), []
     for i, order in enumerate(stops):
-      if order.ref_price > order.stop:
-        if order.stop >= price:
-          ready.append(i)
-      else:
-        if price >= order.stop:
-          ready.append(i)
+      # Check for price crossing the stop value.
+      if (order.ref_price - order.stop) * (order.stop - price) >= 0:
+        ready.append(i)
 
     for i in reversed(ready):
       order = stops[i]
-      stops.pop(i)
       alog.debug0(f'Stop order triggered: {order}')
+
+      stops.pop(i)
+
       self.scheduler.enter(self._fill_delay, self._try_fill_order,
                            ref=self._schedref, argument=(order.id,))
 
@@ -318,7 +318,7 @@ class API(api_base.TradeAPI):
                   filled_quantity=filled_quantity,
                   filled_avg_price=price.price)
 
-    self._orders[self._order_id] = order
+    self._orders[order.id] = order
     self._order_id += 1
 
     if filled_quantity < quantity:
@@ -367,12 +367,6 @@ class API(api_base.TradeAPI):
         if (order.created > start_date and order.created < end_date and
             self._match_status(order, status)):
           orders.append(order)
-
-      for stops in self._stops.values():
-        for order in stops:
-          if (order.created > start_date and order.created < end_date and
-              self._match_status(order, status)):
-            orders.append(order)
 
     orders = sorted(orders, key=lambda o: o.created)
     if limit is not None:
