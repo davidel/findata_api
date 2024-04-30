@@ -239,6 +239,12 @@ class API(api_base.TradeAPI):
     self.scheduler.enter(self._fill_delay, self._try_fill_order,
                          ref=self._schedref, argument=(order_id,))
 
+  def _order_status(self, to_be_filled, filled_quantity, current_fill, quantity):
+    if filled_quantity < to_be_filled:
+      return 'truncated'
+
+    return 'filled' if current_fill == quantity else 'partially_filled'
+
   def _try_fill_order(self, order_id):
     with self._lock:
       order = self._orders.get(order_id)
@@ -250,20 +256,20 @@ class API(api_base.TradeAPI):
                                                 order.side,
                                                 order.type)
 
-        if filled_quantity:
-          current_fill = order.filled_quantity + filled_quantity
-          avg_price = (order.filled_avg_price * order.filled_quantity +
-                       price.price * filled_quantity) / current_fill
-          status = 'filled' if current_fill == order.quantity else 'partially_filled'
-          self._orders[order_id] = pyu.new_with(order,
-                                                filled_quantity=current_fill,
-                                                filled=self.now(),
-                                                status=status,
-                                                filled_avg_price=avg_price)
-          if filled_quantity == to_be_filled and current_fill < order.quantity:
-            self._schedule_fill(order_id)
-        else:
-          self._orders[order_id] = pyu.new_with(order, status='truncated')
+        current_fill = order.filled_quantity + filled_quantity
+        avg_price = (order.filled_avg_price * order.filled_quantity +
+                     price.price * filled_quantity) / current_fill
+        status = self._order_status(to_be_filled, filled_quantity, current_fill,
+                                    order.quantity)
+
+        self._orders[order_id] = pyu.new_with(order,
+                                              filled_quantity=current_fill,
+                                              filled=self.now(),
+                                              status=status,
+                                              filled_avg_price=avg_price)
+
+        if filled_quantity == to_be_filled and current_fill < order.quantity:
+          self._schedule_fill(order_id)
 
   def _submit_stop_order(self, symbol, quantity, side, type, stop):
     price = self._prices.get(symbol)
@@ -309,7 +315,9 @@ class API(api_base.TradeAPI):
                                             type)
 
     now = self.now()
-    status = 'filled' if filled_quantity == quantity else 'partially_filled'
+    status = self._order_status(to_be_filled, filled_quantity, filled_quantity,
+                                quantity)
+
     order = Order(id=self._order_id,
                   symbol=symbol,
                   quantity=quantity,
