@@ -243,10 +243,10 @@ class API(api_base.TradeAPI):
     with self._lock:
       order = self._orders.get(order_id)
       if order is not None and order.status not in {'filled', 'truncated'}:
+        to_be_filled = self._fill_quantity(order.quantity, order.filled_quantity)
         filled_quantity, price = self._try_fill(order_id,
                                                 order.symbol,
-                                                self._fill_quantity(order.quantity,
-                                                                    order.filled_quantity),
+                                                to_be_filled,
                                                 order.side,
                                                 order.type)
 
@@ -260,7 +260,7 @@ class API(api_base.TradeAPI):
                                                 filled=self.now(),
                                                 status=status,
                                                 filled_avg_price=avg_price)
-          if current_fill < order.quantity:
+          if filled_quantity == to_be_filled and current_fill < order.quantity:
             self._schedule_fill(order_id)
         else:
           self._orders[order_id] = pyu.new_with(order, status='truncated')
@@ -301,9 +301,10 @@ class API(api_base.TradeAPI):
       self._schedule_fill(order.id)
 
   def _submit_order(self, symbol, quantity, side, type):
+    to_be_filled = self._fill_quantity(quantity, 0)
     filled_quantity, price = self._try_fill(self._order_id,
                                             symbol,
-                                            self._fill_quantity(quantity, 0),
+                                            to_be_filled,
                                             side,
                                             type)
 
@@ -323,7 +324,7 @@ class API(api_base.TradeAPI):
     self._orders[order.id] = order
     self._order_id += 1
 
-    if filled_quantity < quantity:
+    if filled_quantity == to_be_filled and filled_quantity < quantity:
       self._schedule_fill(order.id)
 
     return order
