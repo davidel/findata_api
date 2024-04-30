@@ -79,7 +79,6 @@ class TimeGen:
   Wait = pykw.key_wrap('Wait', 'wakeup_time')
 
   def __init__(self):
-    super().__init__()
     self._lock = threading.Lock()
     self._time = 0
     self._waits = []
