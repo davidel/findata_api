@@ -268,7 +268,7 @@ class API(api_base.TradeAPI):
                                               status=status,
                                               filled_avg_price=avg_price)
 
-        if filled_quantity == to_be_filled and current_fill < order.quantity:
+        if status == 'partially_filled':
           self._schedule_fill(order_id)
 
   def _submit_stop_order(self, symbol, quantity, side, type, stop):
@@ -332,7 +332,7 @@ class API(api_base.TradeAPI):
     self._orders[order.id] = order
     self._order_id += 1
 
-    if filled_quantity == to_be_filled and filled_quantity < quantity:
+    if status == 'partially_filled':
       self._schedule_fill(order.id)
 
     return order
