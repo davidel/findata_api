@@ -236,6 +236,7 @@ class API(api_base.TradeAPI):
     return min(qleft, qpct)
 
   def _schedule_fill(self, order_id):
+    alog.warning(f'Fill {order_id}')
     self.scheduler.enter(self._fill_delay, self._try_fill_order,
                          ref=self._schedref, argument=(order_id,))
 
