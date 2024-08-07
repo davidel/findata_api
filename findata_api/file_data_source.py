@@ -58,7 +58,11 @@ def _enumerate_dataframe(path, dtype, args):
 
     dfs = dict()
     for sym, fdata in sym_data.items():
-      fdata['t'] = [tsplit] * len(pyu.seqfirst(fdata.values()))
+      nvalues = len(pyu.seqfirst(fdata.values()))
+      fdata['t'] = [tsplit] * nvalues
+      if 'symbol' not in fdata:
+        fdata['symbol'] = [sym] * nvalues
+
       dfs[sym] = pd.DataFrame(data=fdata)
 
     yield dfs
