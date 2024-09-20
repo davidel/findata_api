@@ -14,7 +14,7 @@ from py_misc_utils import utils as pyu
 def _detect_apis():
   parent, _ = pyu.split_module_name(__name__)
 
-  apis = pydm.DynLoader('_api', modname=parent)
+  apis = pydm.DynLoader(modname=parent, postfix='_api')
   module_names = apis.module_names()
 
   order = {name: len(module_names) - i for i, name in enumerate(os.getenv(
