@@ -8,11 +8,12 @@ import threading
 from py_misc_utils import alog
 from py_misc_utils import cleanups
 from py_misc_utils import dyn_modules as pydm
+from py_misc_utils import module_utils as pymu
 from py_misc_utils import utils as pyu
 
 
 def _detect_apis():
-  parent, _ = pyu.split_module_name(__name__)
+  parent, _ = pymu.split_module_name(__name__)
 
   apis = pydm.DynLoader(modname=parent, postfix='_api')
   module_names = apis.module_names()
