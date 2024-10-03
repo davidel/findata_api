@@ -93,7 +93,7 @@ class Splits:
       timestamp = int(dt.timestamp())
 
       idx = bisect.bisect(slist, timestamp, key=lambda e: e.timestamp)
-      for e in slist[idx: ]:
+      for e in slist[idx:]:
         factor *= e.split_factor
 
     return factor
