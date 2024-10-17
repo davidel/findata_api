@@ -1,9 +1,9 @@
 import threading
 
-from py_misc_utils import alog
-from py_misc_utils import date_utils as pyd
-from py_misc_utils import scheduler as sch
-from py_misc_utils import utils as pyu
+import py_misc_utils.alog as alog
+import py_misc_utils.date_utils as pyd
+import py_misc_utils.scheduler as sch
+import py_misc_utils.utils as pyu
 
 
 class StreamDataBase:

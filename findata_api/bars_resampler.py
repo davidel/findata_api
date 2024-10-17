@@ -1,9 +1,9 @@
 import numpy as np
-from py_misc_utils import alog
-from py_misc_utils import assert_checks as tas
-from py_misc_utils import date_utils as pyd
-from py_misc_utils import stream_dataframe as stdf
-from py_misc_utils import utils as pyu
+import py_misc_utils.alog as alog
+import py_misc_utils.assert_checks as tas
+import py_misc_utils.date_utils as pyd
+import py_misc_utils.stream_dataframe as stdf
+import py_misc_utils.utils as pyu
 
 from . import market_hours as mh
 from . import splits as spl

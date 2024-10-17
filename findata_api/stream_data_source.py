@@ -2,9 +2,9 @@ import collections
 import threading
 
 import numpy as np
-from py_misc_utils import alog
-from py_misc_utils import assert_checks as tas
-from py_misc_utils import utils as pyu
+import py_misc_utils.alog as alog
+import py_misc_utils.assert_checks as tas
+import py_misc_utils.utils as pyu
 
 from . import data_source_base as dsb
 from . import stream_computer as sc

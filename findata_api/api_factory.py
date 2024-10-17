@@ -5,11 +5,11 @@ import importlib
 import os
 import threading
 
-from py_misc_utils import alog
-from py_misc_utils import cleanups
-from py_misc_utils import dyn_modules as pydm
-from py_misc_utils import module_utils as pymu
-from py_misc_utils import utils as pyu
+import py_misc_utils.alog as alog
+import py_misc_utils.cleanups as cleanups
+import py_misc_utils.dyn_modules as pydm
+import py_misc_utils.module_utils as pymu
+import py_misc_utils.utils as pyu
 
 
 def _detect_apis():

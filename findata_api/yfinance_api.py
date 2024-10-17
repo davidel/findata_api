@@ -3,9 +3,9 @@ import numpy as np
 import pandas as pd
 import pytz
 
-from py_misc_utils import alog
-from py_misc_utils import date_utils as pyd
-from py_misc_utils import throttle
+import py_misc_utils.alog as alog
+import py_misc_utils.date_utils as pyd
+import py_misc_utils.throttle as throttle
 
 from . import api_base
 from . import utils as ut

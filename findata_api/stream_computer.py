@@ -4,9 +4,9 @@ import sys
 import threading
 
 import numpy as np
-from py_misc_utils import alog
-from py_misc_utils import named_array as nar
-from py_misc_utils import utils as pyu
+import py_misc_utils.alog as alog
+import py_misc_utils.named_array as nar
+import py_misc_utils.utils as pyu
 
 
 _TRADES_FIELDS = ('timestamps', 'prices', 'volume')

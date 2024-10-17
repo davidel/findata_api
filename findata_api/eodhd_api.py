@@ -9,13 +9,13 @@ import websocket
 import numpy as np
 import orjson
 import pandas as pd
-from py_misc_utils import alog
-from py_misc_utils import assert_checks as tas
-from py_misc_utils import context_base as pycb
-from py_misc_utils import date_utils as pyd
-from py_misc_utils import fin_wrap as pyfw
-from py_misc_utils import throttle
-from py_misc_utils import utils as pyu
+import py_misc_utils.alog as alog
+import py_misc_utils.assert_checks as tas
+import py_misc_utils.context_base as pycb
+import py_misc_utils.date_utils as pyd
+import py_misc_utils.fin_wrap as pyfw
+import py_misc_utils.throttle as throttle
+import py_misc_utils.utils as pyu
 
 from . import api_base
 from . import api_types
