@@ -1,6 +1,5 @@
 import array
 import collections
-import json
 import math
 import os
 import re
@@ -20,7 +19,7 @@ _TRADES_FIELDS = (
   pyu.make_object(name='quantity', fmt='f'),
   pyu.make_object(name='price', fmt='f'),
 )
-_CONFIG_FILE = 'config.json'
+_CONFIG_FILE = 'config.yaml'
 _TRADES_DIR = 'trades'
 _TRADES_IDX_DIR = 'trades_indices'
 
@@ -159,8 +158,7 @@ class Estimator:
 
     conf = dict(trades_window=self._trades_window,
                 trades_time_scaler=self._trades_time_scaler)
-    with open(os.path.join(path, _CONFIG_FILE), mode='w') as f:
-      json.dump(conf, f, indent=2)
+    pyu.write_config(conf, os.path.join(path, _CONFIG_FILE))
 
     _save_indices(path, _TRADES_IDX_DIR, self._trades_indices)
 
@@ -168,8 +166,7 @@ class Estimator:
   def _load_config(path):
     conf_path = os.path.join(path, _CONFIG_FILE)
     if os.path.exists(conf_path):
-      with open(conf_path, mode='r') as f:
-        return json.load(f)
+      return pyu.load_config(cfg_file=conf_path)
 
     return dict()
 
