@@ -14,6 +14,7 @@ import py_misc_utils.assert_checks as tas
 import py_misc_utils.context_base as pycb
 import py_misc_utils.date_utils as pyd
 import py_misc_utils.fin_wrap as pyfw
+import py_misc_utils.no_except as pynex
 import py_misc_utils.throttle as throttle
 import py_misc_utils.utils as pyu
 
@@ -284,7 +285,7 @@ class Stream(pycb.ContextBase):
       # an async thread and do it from there. The WebSocket API will call the on-close
       # callback one all the teardown is completed, making it safe to issue a new
       # run_async().
-      pyu.run_async(pyu.xwrap_fn(self._reconnect))
+      pyu.run_async(pynex.xwrap_fn(self._reconnect))
 
   def _on_error(self, wsa, error):
     alog.error(f'[{self._name}] Streaming connection error: {error}')
