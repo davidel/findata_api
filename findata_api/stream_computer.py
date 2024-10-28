@@ -199,7 +199,7 @@ class StreamComputer:
         break
       pvalues = rbar.get_values(start_ts, end_ts)
       if values is not None:
-        values.exend_ts(pvalues)
+        values.extend(pvalues)
       else:
         values = pvalues
 
