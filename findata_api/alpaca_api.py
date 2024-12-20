@@ -19,6 +19,7 @@ from . import api_types
 from . import utils as ut
 
 try:
+  # Note: They have a new Python package at https://github.com/alpacahq/alpaca-py
   import alpaca_trade_api as alpaca
 
   MODULE_NAME = 'ALPACA'
