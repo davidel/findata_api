@@ -3,6 +3,7 @@ import bisect
 
 import numpy as np
 import pandas as pd
+import py_misc_utils.core_utils as pycu
 import py_misc_utils.date_utils as pyd
 import py_misc_utils.np_utils as pyn
 import py_misc_utils.pd_utils as pyp
@@ -17,7 +18,7 @@ def _load_splits_data(path):
 
   tz = pyd.ny_market_timezone()
 
-  usym = pyu.unique(sdata['symbol'])
+  usym = pycu.unique(sdata['symbol'])
 
   dates = sdata['date']
   noms = sdata.get('nom')
@@ -120,7 +121,7 @@ class Splits:
 
     times = rwdata[timecol]
 
-    usym = pyu.unique(rwdata[symcol])
+    usym = pycu.unique(rwdata[symcol])
     for sym, symidx in usym.items():
       if self.has_splits(sym):
         for idx in symidx:
