@@ -9,6 +9,7 @@ import numpy as np
 import pandas as pd
 import py_misc_utils.alog as alog
 import py_misc_utils.assert_checks as tas
+import py_misc_utils.core_utils as pycu
 import py_misc_utils.date_utils as pyd
 import py_misc_utils.executor as pyex
 import py_misc_utils.key_wrap as pykw
@@ -200,7 +201,7 @@ class API(api_base.TradeAPI):
         qleft = quantity - filled_quantity
         if p.quantity > qleft:
           pos_quantity = qleft
-          changes.append((i, pyu.new_with(p, quantity=p.quantity - qleft)))
+          changes.append((i, pycu.new_with(p, quantity=p.quantity - qleft)))
         else:
           pos_quantity = p.quantity
           changes.append((i, None))
@@ -261,11 +262,11 @@ class API(api_base.TradeAPI):
         status = self._order_status(to_be_filled, filled_quantity, current_fill,
                                     order.quantity)
 
-        self._orders[order_id] = pyu.new_with(order,
-                                              filled_quantity=current_fill,
-                                              filled=self.now(),
-                                              status=status,
-                                              filled_avg_price=avg_price)
+        self._orders[order_id] = pycu.new_with(order,
+                                               filled_quantity=current_fill,
+                                               filled=self.now(),
+                                               status=status,
+                                               filled_avg_price=avg_price)
 
         if status == 'partially_filled':
           self._schedule_fill(order_id)
@@ -387,7 +388,7 @@ class API(api_base.TradeAPI):
     with self._lock:
       order = self._orders.get(oid)
       if order is not None and order.status in {'new', 'partially_filled'}:
-        self._orders[oid] = pyu.new_with(order, status='canceled')
+        self._orders[oid] = pycu.new_with(order, status='canceled')
 
   def list_positions(self):
     with self._lock:

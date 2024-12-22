@@ -4,6 +4,7 @@ import threading
 import py_misc_utils.abs_timeout as pyat
 import py_misc_utils.alog as alog
 import py_misc_utils.cond_waiter as pycw
+import py_misc_utils.core_utils as pycu
 import py_misc_utils.scheduler as sch
 import py_misc_utils.utils as pyu
 
@@ -44,8 +45,8 @@ class OrderTracker:
       elif order_id in self._orders:
         event = self.scheduler.enter(self._refresh_time, self._track_order,
                                      argument=(order_id,))
-        self._orders[order_id] = pyu.new_with(self._orders[order_id],
-                                              event=event)
+        self._orders[order_id] = pycu.new_with(self._orders[order_id],
+                                               event=event)
 
     if completed_order is not None:
       self.scheduler.executor.submit(completed_order.completed_fn, order)
