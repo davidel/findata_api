@@ -11,6 +11,7 @@ import pandas as pd
 import py_misc_utils.alog as alog
 import py_misc_utils.assert_checks as tas
 import py_misc_utils.context_base as pycb
+import py_misc_utils.core_utils as pycu
 import py_misc_utils.date_utils as pyd
 import py_misc_utils.fin_wrap as pyfw
 import py_misc_utils.no_except as pynex
@@ -159,8 +160,7 @@ class WebSocketClient:
     self._ws.run_forever(**kwargs)
 
   def run_async(self, **kwargs):
-    self._run_thread = threading.Thread(target=self.run, kwargs=kwargs)
-    self._run_thread.start()
+    self._run_thread = pycu.run_async(self.run, **kwargs)
 
   def close_connection(self):
     self._ws.close()
@@ -276,7 +276,7 @@ class Stream(pycb.ContextBase):
       # an async thread and do it from there. The WebSocket API will call the on-close
       # callback one all the teardown is completed, making it safe to issue a new
       # run_async().
-      pyu.run_async(pynex.xwrap_fn(self._reconnect))
+      pycu.run_async(pynex.xwrap_fn(self._reconnect))
 
   def _on_error(self, wsa, error):
     alog.error(f'Streaming connection error: {error}')
