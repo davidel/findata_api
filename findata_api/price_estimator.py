@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import py_misc_utils.alog as alog
 import py_misc_utils.assert_checks as tas
+import py_misc_utils.core_utils as pycu
 import py_misc_utils.date_utils as pyd
 import py_misc_utils.pd_utils as pyp
 import py_misc_utils.named_array as nar
@@ -104,7 +105,7 @@ class Estimator:
     timestamps, quantities, prices = self._trades_data(sym, 'timestamp', 'quantity', 'price')
 
     indices = self._trades_indices[sym]
-    pos = pyu.bisect_right(ts, lambda i: timestamps[indices[i]], len(indices)) - 1
+    pos = pycu.bisect_right(ts, lambda i: timestamps[indices[i]], len(indices)) - 1
 
     tbase = timestamps[indices[pos]]
     scaler, total = 0, 0
@@ -127,7 +128,7 @@ class Estimator:
     timestamps, *_ = self._trades_data(sym, 'timestamp')
 
     indices = self._trades_indices[sym]
-    pos = pyu.bisect_right(t0, lambda i: timestamps[indices[i]], len(indices)) - 1
+    pos = pycu.bisect_right(t0, lambda i: timestamps[indices[i]], len(indices)) - 1
 
     for epos in range(pos, len(indices)):
       x = indices[epos]

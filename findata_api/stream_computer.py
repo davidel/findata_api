@@ -5,6 +5,7 @@ import threading
 
 import numpy as np
 import py_misc_utils.alog as alog
+import py_misc_utils.core_utils as pycu
 import py_misc_utils.named_array as nar
 import py_misc_utils.utils as pyu
 
@@ -55,7 +56,7 @@ def _get_bound_times(start_ts, end_ts):
 def _get_timerange_indices(timestamps, start_ts, end_ts):
   np_timestamps = np.array(timestamps)
   indices = np.argsort(np_timestamps)
-  pos = pyu.bisect_left(start_ts, lambda i: np_timestamps[indices[i]], len(indices))
+  pos = pycu.bisect_left(start_ts, lambda i: np_timestamps[indices[i]], len(indices))
   for i in range(pos, len(indices)):
     x = indices[i]
     if np_timestamps[x] >= end_ts:
@@ -191,7 +192,7 @@ class StreamComputer:
     bars_stg.sort()
     sbars = bars_stg.bars()
 
-    pos = pyu.bisect_left(start_ts, lambda i: sbars[i].timestamp, len(sbars))
+    pos = pycu.bisect_left(start_ts, lambda i: sbars[i].timestamp, len(sbars))
     values = None
     for i in range(pos, len(sbars)):
       rbar = sbars[i]
