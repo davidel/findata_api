@@ -167,7 +167,7 @@ class Estimator:
   def _load_config(path):
     conf_path = os.path.join(path, _CONFIG_FILE)
     if os.path.exists(conf_path):
-      return pyu.load_config(cfg_file=conf_path)
+      return pyu.load_config(conf_path)
 
     return dict()
 
