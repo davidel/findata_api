@@ -8,6 +8,7 @@ import threading
 import py_misc_utils.alog as alog
 import py_misc_utils.cleanups as cleanups
 import py_misc_utils.dyn_modules as pydm
+import py_misc_utils.init_variables as pyiv
 import py_misc_utils.module_utils as pymu
 import py_misc_utils.utils as pyu
 
@@ -49,17 +50,40 @@ def add_api_options(parser):
     mod.add_api_options(parser)
 
 
-_LOCK = threading.Lock()
-_API_CACHE = dict()
+class _ApiCache:
 
-@cleanups.reg
-def _cleanup():
-  with _LOCK:
-    apis = list(_API_CACHE.values())
-    _API_CACHE.clear()
+  def __init__(self):
+    self._lock = threading.Lock()
+    self._cache = dict()
+
+  def get(self, mod, name, args):
+    with self._lock:
+      api = self._cache.get(name)
+      if api is None:
+        api = mod.create_api(args)
+        self._cache[name] = api
+
+  def clear(self):
+    with self._lock:
+      apis = list(self._cache.values())
+      self._cache = dict()
 
     for api in apis:
       api.close()
+
+
+def _init_api_cache():
+  api_cache = _ApiCache()
+
+  cleanups.register(api_cache.clear)
+
+  return api_cache
+
+
+_VARID = pyiv.varid(__name__, 'api_cache')
+
+def _api_cache():
+  return pyiv.get(_VARID, _init_api_cache)
 
 
 def _merged_args(sargs, nargs):
@@ -83,11 +107,7 @@ def create_api(name=None, create=False, args=None):
   if create:
     api = mod.create_api(_merged_args(_ARGS, args))
   else:
-    with _LOCK:
-      api = _API_CACHE.get(name)
-      if api is None:
-        api = mod.create_api(_ARGS)
-        _API_CACHE[name] = api
+    api = _api_cache().get(mod, name, _ARGS)
 
   alog.debug0(f'Using {api.name} API')
 
