@@ -50,11 +50,15 @@ def add_api_options(parser):
     mod.add_api_options(parser)
 
 
-class _ApiCache:
+class _ApiCache(pyiv.VarBase):
 
   def __init__(self):
     self._lock = threading.Lock()
     self._cache = dict()
+    self._cid = cleanups.register(self.clear)
+
+  def cleanup(self):
+    cleanups.unregister(self._cid, run=True)
 
   def get(self, mod, name, args):
     with self._lock:
@@ -72,18 +76,10 @@ class _ApiCache:
       api.close()
 
 
-def _init_api_cache():
-  api_cache = _ApiCache()
-
-  cleanups.register(api_cache.clear)
-
-  return api_cache
-
-
 _VARID = pyiv.varid(__name__, 'api_cache')
 
 def _api_cache():
-  return pyiv.get(_VARID, _init_api_cache)
+  return pyiv.get(_VARID, _ApiCache)
 
 
 def _merged_args(sargs, nargs):
