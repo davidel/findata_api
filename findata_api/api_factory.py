@@ -76,7 +76,7 @@ class _ApiCache(pyiv.VarBase):
       api.close()
 
 
-_VARID = pyiv.varid(__name__, 'api_cache')
+_VARID = pyiv.varid(__file__, 'api_cache')
 
 def _api_cache():
   return pyiv.get(_VARID, _ApiCache)
