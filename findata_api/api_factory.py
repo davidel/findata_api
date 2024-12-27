@@ -57,9 +57,6 @@ class _ApiCache(pyiv.VarBase):
     self._cache = dict()
     self._cid = cleanups.register(self.clear)
 
-  def cleanup(self):
-    cleanups.unregister(self._cid, run=True)
-
   def get(self, mod, name, args):
     with self._lock:
       api = self._cache.get(name)
