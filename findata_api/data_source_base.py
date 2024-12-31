@@ -2,7 +2,7 @@ import numpy as np
 import py_misc_utils.alog as alog
 import py_misc_utils.assert_checks as tas
 import py_misc_utils.date_utils as pyd
-import py_misc_utils.utils as pyu
+import py_misc_utils.num_utils as pynu
 
 from . import stream_data_base as sdb
 from . import utils as ut
@@ -21,5 +21,5 @@ class DataSourceBase(sdb.StreamDataBase):
     self._dtype = dtype
 
   def _next_poll_time(self):
-    return pyu.round_up(self._scheduler.timegen.now(), self._step_delta) + self._fetch_delay
+    return pynu.round_up(self._scheduler.timegen.now(), self._step_delta) + self._fetch_delay
 
