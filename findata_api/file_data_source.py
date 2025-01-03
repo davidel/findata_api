@@ -6,6 +6,7 @@ import numpy as np
 import pandas as pd
 import py_misc_utils.alog as alog
 import py_misc_utils.assert_checks as tas
+import py_misc_utils.core_utils as pycu
 import py_misc_utils.date_utils as pyd
 import py_misc_utils.np_utils as pyn
 import py_misc_utils.pd_utils as pyp
@@ -58,7 +59,7 @@ def _enumerate_dataframe(path, dtype, args):
 
     dfs = dict()
     for sym, fdata in sym_data.items():
-      nvalues = len(pyu.seqfirst(fdata.values()))
+      nvalues = len(pycu.seqfirst(fdata.values()))
       fdata['t'] = [tsplit] * nvalues
       if 'symbol' not in fdata:
         fdata['symbol'] = [sym] * nvalues
