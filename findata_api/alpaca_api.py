@@ -8,6 +8,7 @@ import numpy as np
 import pandas as pd
 import py_misc_utils.alog as alog
 import py_misc_utils.assert_checks as tas
+import py_misc_utils.core_utils as pycu
 import py_misc_utils.date_utils as pyd
 import py_misc_utils.fin_wrap as pyfw
 import py_misc_utils.pd_utils as pyp
@@ -92,27 +93,27 @@ def _maybe_date(dstr):
 def _marshal_order(o):
   return api_types.Order(id=o.id,
                          symbol=o.symbol,
-                         quantity=pyu.cast(o.qty, float),
+                         quantity=pycu.cast(o.qty, float),
                          side=o.side,
                          type=o.type,
-                         limit=pyu.cast(o.limit_price, float),
-                         stop=pyu.cast(o.stop_price, float),
+                         limit=pycu.cast(o.limit_price, float),
+                         stop=pycu.cast(o.stop_price, float),
                          status=o.status,
                          created=_maybe_date(o.created_at),
                          filled=_maybe_date(o.filled_at),
-                         filled_quantity=pyu.cast(o.filled_qty, float),
-                         filled_avg_price=pyu.cast(o.filled_avg_price, float))
+                         filled_quantity=pycu.cast(o.filled_qty, float),
+                         filled_avg_price=pycu.cast(o.filled_avg_price, float))
 
 
 def _marshal_position(p):
   return api_types.Position(symbol=p.symbol,
-                            quantity=pyu.cast(p.qty, float),
-                            value=pyu.cast(p.market_value, float))
+                            quantity=pycu.cast(p.qty, float),
+                            value=pycu.cast(p.market_value, float))
 
 
 def _marshal_account(a):
   return api_types.Account(id=a.account_number,
-                           buying_power=pyu.cast(a.buying_power, float))
+                           buying_power=pycu.cast(a.buying_power, float))
 
 
 def _get_stream_ts(v):
