@@ -51,8 +51,8 @@ class Storage:
     stg = dict()
     for sym, na in self._symbols.items():
       sym_data = dict()
-      for field, data in na.data.items():
-        sym_data[field] = np.array(data)
+      for field, data in na.data().items():
+        sym_data[field] = np.asarray(data)
 
       stg[sym] = sym_data
 
