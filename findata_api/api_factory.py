@@ -8,7 +8,7 @@ import threading
 import py_misc_utils.alog as alog
 import py_misc_utils.cleanups as cleanups
 import py_misc_utils.dyn_modules as pydm
-import py_misc_utils.init_variables as pyiv
+import py_misc_utils.global_namespace as gns
 import py_misc_utils.module_utils as pymu
 import py_misc_utils.utils as pyu
 
@@ -50,7 +50,7 @@ def add_api_options(parser):
     mod.add_api_options(parser)
 
 
-class _ApiCache(pyiv.VarBase):
+class _ApiCache:
 
   def __init__(self):
     self._lock = threading.Lock()
@@ -73,10 +73,12 @@ class _ApiCache(pyiv.VarBase):
       api.close()
 
 
-_VARID = pyiv.varid(__name__, 'api_cache')
+_API_CACHE = gns.Var(f'{__name__}.API_CACHE',
+                     fork_init=True,
+                     defval=lambda: _ApiCache())
 
 def _api_cache():
-  return pyiv.get(_VARID, _ApiCache)
+  return gns.get(_API_CACHE)
 
 
 def _merged_args(sargs, nargs):
