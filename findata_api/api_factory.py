@@ -104,7 +104,7 @@ def create_api(name=None, create=False, args=None):
   else:
     api = _api_cache().get(mod, name, _ARGS)
 
-  alog.debug0(f'Using {api.name} API')
+  alog.debug0(f'Using {name} API')
 
   return api
 
