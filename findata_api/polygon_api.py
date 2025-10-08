@@ -195,12 +195,15 @@ class Stream(pycb.ContextBase):
     self._lock = threading.Lock()
     self._status_cv = threading.Condition(self._lock)
     self._status = collections.defaultdict(list, CLOSED=[])
-    self._ctx = Stream._make_ctx()
+    self._ctx = self._make_ctx()
     self._ws_api = WebSocketClient(_ws_url(_STOCKS, service=pyu.getenv('POLYGON_SERVICE')),
                                    self._api_key,
                                    self._process_message,
                                    on_close=self._on_close,
                                    on_error=self._on_error)
+
+  def _make_ctx(self):
+    return self._new_ctx(ws_symbols=(), started=False, handlers=dict())
 
   def _wait_status(self, status, timeout=None):
     with self._status_cv:
