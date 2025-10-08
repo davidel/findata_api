@@ -64,6 +64,8 @@ class _ApiCache:
         api = mod.create_api(args)
         self._cache[name] = api
 
+    return api
+
   def clear(self):
     with self._lock:
       apis = list(self._cache.values())
@@ -104,7 +106,7 @@ def create_api(name=None, create=False, args=None):
   else:
     api = _api_cache().get(mod, name, _ARGS)
 
-  alog.debug0(f'Using {name} API')
+  alog.debug0(f'Using {api.name} API')
 
   return api
 
