@@ -4,7 +4,7 @@ from setuptools import setup, find_packages
 
 
 setup(name='findata_api',
-      version='0.2',
+      version='0.21',
       description='Common API to access financial data',
       author='Davide Libenzi',
       packages=find_packages(),
