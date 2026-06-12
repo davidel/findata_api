@@ -24,17 +24,17 @@ from . import api_types
 from . import utils as ut
 
 try:
-  import polygon
+  import massive
 
-  MODULE_NAME = 'POLYGON'
+  MODULE_NAME = 'MASSIVE'
 
   def add_api_options(parser):
-    parser.add_argument('--polygon_key', type=str,
-                        help='The Polygon API key')
+    parser.add_argument('--massive_key', type=str,
+                        help='The Massive API key')
 
 
   def create_api(args):
-    return API(api_key=args.polygon_key, api_rate=args.api_rate)
+    return API(api_key=args.massive_key, api_rate=args.api_rate)
 
 except ImportError:
   MODULE_NAME = None
@@ -46,8 +46,16 @@ _DATA_STEPS = {
   'd': 'day',
   'w': 'week',
 }
-_BAR_COLUMNS = set(os.getenv('POLYGON_BAR_COLUMNS', 't,o,c,h,l,n,v,vw').split(','))
-_BAR_RENAMES = {'vw': 'a'}
+_BAR_COLUMNS = set(os.getenv('MASSIVE_BAR_COLUMNS', 't,o,c,h,l,n,v,a').split(','))
+_BAR_RENAMES = {
+  'timestamp': 't',
+  'open': 'o',
+  'high': 'h',
+  'low': 'l',
+  'close': 'c',
+  'volume': 'v',
+  'vwap': 'a'
+}
 _MAX_BASE_BARS = 50000
 _DEFAULT_LIMIT = 2000
 
@@ -65,23 +73,22 @@ def _map_data_step(data_step):
 
 def _get_config(key):
   if key is None:
-    key = pyu.getenv('POLYGON_API_KEY')
-    tas.check_is_not_none(key, msg=f'Polygon API key not specified')
+    key = pyu.getenv('MASSIVE_API_KEY')
+    tas.check_is_not_none(key, msg=f'Massive API key not specified')
 
-  alog.debug0(f'Polygon API created with: key={key}')
+  alog.debug0(f'Massive API created with: key={key}')
 
   return key
 
 
 def _get_df_from_response(symbol, resp, dtype=None):
-  results = getattr(resp, 'results', None)
-  if results:
-    df = pd.DataFrame(results)
+  if resp:
+    df = pd.DataFrame(resp)
+    df.rename(columns=_BAR_RENAMES, inplace=True)
 
     drop_cols = [c for c in df.columns if c not in _BAR_COLUMNS]
     if drop_cols:
       df.drop(drop_cols, axis=1, inplace=True)
-    df.rename(columns=_BAR_RENAMES, inplace=True)
 
     df['symbol'] = [symbol] * len(df)
     df['t'] = df['t'] // 1000
@@ -140,7 +147,7 @@ _FOREX = 'forex'
 _CRYPTO = 'crypto'
 
 def _ws_url(cluster, service=None):
-  return f'wss://{service or "socket"}.polygon.io/{cluster}'
+  return f'wss://{service or "socket"}.massive.com/{cluster}'
 
 
 class WebSocketClient:
@@ -196,7 +203,7 @@ class Stream(pycb.ContextBase):
     self._status_cv = threading.Condition(self._lock)
     self._status = collections.defaultdict(list, CLOSED=[])
     self._ctx = self._make_ctx()
-    self._ws_api = WebSocketClient(_ws_url(_STOCKS, service=pyu.getenv('POLYGON_SERVICE')),
+    self._ws_api = WebSocketClient(_ws_url(_STOCKS, service=pyu.getenv('MASSIVE_SERVICE')),
                                    self._api_key,
                                    self._process_message,
                                    on_close=self._on_close,
@@ -227,7 +234,7 @@ class Stream(pycb.ContextBase):
 
   def _reconnect(self):
     with self._lock:
-      alog.info(f'Reconnecting Polygon WebSocket')
+      alog.info(f'Reconnecting Massive WebSocket')
 
       self._stop()
       self._start()
@@ -240,7 +247,7 @@ class Stream(pycb.ContextBase):
         self._register(ctx.ws_symbols, ctx.handlers)
 
   def _start(self):
-    alog.debug2(f'Starting Polygon WebSocket connection')
+    alog.debug2(f'Starting Massive WebSocket connection')
 
     # We bump up the WebSocket buffer size to avoid message traffic peaks to
     # cause back pressure on the server side, which will result in the server
@@ -261,7 +268,7 @@ class Stream(pycb.ContextBase):
       self._start()
 
   def _stop(self):
-    alog.debug2(f'Stopping Polygon WebSocket connection')
+    alog.debug2(f'Stopping Massive WebSocket connection')
     self._new_ctx(started=False)
     self._ws_api.close_connection()
 
@@ -320,7 +327,7 @@ class Stream(pycb.ContextBase):
 
   def authenticate(self):
     if not self._has_status('AUTHENTICATED'):
-      alog.debug0(f'Authenticating to the Polygon streaming service')
+      alog.debug0(f'Authenticating to the Massive streaming service')
       self._wait_status('CONNECTED')
       self._ws_api.authenticate()
       self._wait_status('AUTHENTICATED')
@@ -345,9 +352,9 @@ class Stream(pycb.ContextBase):
 class API(api_base.API):
 
   def __init__(self, api_key=None, api_rate=None):
-    super().__init__(name='Polygon', supports_streaming=True)
+    super().__init__(name='Massive', supports_streaming=True)
     self._api_key = _get_config(api_key)
-    self._api = polygon.RESTClient(self._api_key)
+    self._api = massive.RESTClient(self._api_key)
     self._api_throttle = throttle.Throttle(
       (5 if api_rate is None else api_rate) / 60.0)
     self._stream = None
@@ -369,7 +376,7 @@ class API(api_base.API):
       pyfw.fin_wrap(self, '_stream', None)
 
   def _get_limited_limit(self, span, step_delta, max_bars):
-    limit = pyu.getenv('POLYGON_LIMIT', dtype=int, defval=_DEFAULT_LIMIT)
+    limit = pyu.getenv('MASSIVE_LIMIT', dtype=int, defval=_DEFAULT_LIMIT)
 
     if span in {'minute', 'hour'}:
       bar_limit = max_bars // int(step_delta.total_seconds() / 60)
@@ -388,20 +395,18 @@ class API(api_base.API):
     tsteps = ut.break_period_in_dates_list(start_date, end_date, step_delta * xlimit)
 
     dfs = []
-    for tstart, tend in tsteps:
-      start = int(tstart.timestamp() * 1000)
-      end = int(tend.timestamp() * 1000)
+    for start, end in tsteps:
+      alog.debug0(f'Fetch: start={start.isoformat()}\tend={end.isoformat()}')
 
-      alog.debug0(f'Fetch: start={tstart}\tend={tend}')
       for symbol in symbols:
         with self._api_throttle.trigger():
-          resp = self._api.stocks_equities_aggregates(symbol,
-                                                      mult,
-                                                      span,
-                                                      start,
-                                                      end,
-                                                      limit=_MAX_BASE_BARS,
-                                                      unadjusted=False)
+          resp = self._api.get_aggs(symbol,
+                                    mult,
+                                    span,
+                                    start,
+                                    end,
+                                    limit=_MAX_BASE_BARS,
+                                    adjusted=True)
 
         df = _get_df_from_response(symbol, resp, dtype=dtype)
         if df is not None:

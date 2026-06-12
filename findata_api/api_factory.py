@@ -21,7 +21,7 @@ def _detect_apis():
 
   order = {name: len(module_names) - i for i, name in enumerate(os.getenv(
     'FINDATA_API_ORDER',
-    'finnhub,yfinance,polygon,alpha_vantage,alpaca').split(','))}
+    'finnhub,yfinance,massive,alpha_vantage,alpaca').split(','))}
 
   ordered_modules = sorted(module_names,
                            key=lambda x: order.get(x, -1),
