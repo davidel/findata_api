@@ -208,6 +208,8 @@ class Stream:
         handler(_marshal_stream_bar(d))
 
   def _stream_thread_fn(self):
+    alog.debug0(f'Stream thread entering run loop')
+
     self._thread_loop = asyncio.new_event_loop()
     asyncio.set_event_loop(self._thread_loop)
     try:
@@ -221,7 +223,7 @@ class Stream:
     if not self._stopping:
       alog.debug0(f'Stopping Alpaca stream')
       self._stopping = True
-      asyncio.run_coroutine_threadsafe(self._conn.stop_ws(), self._thread_loop)
+      self._conn.stop()
       self._stream_thread.join()
 
   def register(self, symbols, handlers):
