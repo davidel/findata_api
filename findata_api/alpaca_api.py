@@ -23,6 +23,7 @@ from . import utils as ut
 try:
   import alpaca
   import alpaca.data
+  import alpaca.trading
 
   MODULE_NAME = 'ALPACA'
 
@@ -229,15 +230,23 @@ class Stream:
 
 class API(api_base.TradeAPI):
 
-  def __init__(self, api_key=None, api_secret=None, api_rate=None,
-               symbols_per_step=20, data_stream_url='https://stream.data.alpaca.markets',
-               data_feed='sip'):
+  def __init__(self,
+               api_key=None,
+               api_secret=None,
+               api_rate=None,
+               symbols_per_step=20,
+               data_stream_url='https://stream.data.alpaca.markets',
+               data_feed='sip',
+               paper=True):
     super().__init__(name='Alpaca', supports_streaming=True)
     self._api_key, self._api_secret = _get_config(api_key, api_secret)
-    self._api = alpaca.data.historical.stock.StockHistoricalDataClient(
+    self._data_api = alpaca.data.historical.stock.StockHistoricalDataClient(
+      api_key=self._api_key,
+      secret_key=self._api_secret)
+    self._trading_api = alpaca.trading.client.TradingClient(
       api_key=self._api_key,
       secret_key=self._api_secret,
-    )
+      paper=paper)
     self._api_throttle = throttle.Throttle(
       (200 if api_rate is None else api_rate) / 60.0)
     self._symbols_per_step = symbols_per_step
@@ -265,15 +274,17 @@ class API(api_base.TradeAPI):
 
   def get_account(self):
     with self._api_throttle.trigger():
-      account = self._api.get_account()
+      account = self._trading_api.get_account()
 
     return _marshal_account(account)
 
   def get_market_hours(self, dt):
     dtz = dt.astimezone(pyd.ny_market_timezone())
-    dts = dtz.strftime('%Y-%m-%d')
+    calender_request = alpaca.trading.requests.GetCalendarRequest(start=dtz, end=dtz)
+
     with self._api_throttle.trigger():
-      calendar = self._api.get_calendar(start=dts, end=dts)
+      calendar = self._trading_api.get_calendar(calender_request)
+
     if calendar:
       calendar = calendar[0]
       market_open = dtz.replace(hour=calendar.open.hour, minute=calendar.open.minute,
@@ -284,26 +295,35 @@ class API(api_base.TradeAPI):
       return market_open, market_close
 
   def submit_order(self, symbol, quantity, side, type='market', limit=None, stop=None):
+    order_request = alpaca.trading.requests.MarketOrderRequest(
+      symbol=symbol,
+      qty=quantity,
+      side=side,
+      type=type,
+      limit_price=limit,
+      stop_price=stop)
+
     with self._api_throttle.trigger():
-      order = self._api.submit_order(symbol, qty=quantity, side=side, type=type,
-                                     limit_price=limit, stop_price=stop)
+      order = self._trading_api.submit_order(order_data=order_request)
+
 
     return _marshal_order(order)
 
   def get_order(self, oid):
     with self._api_throttle.trigger():
-      order = self._api.get_order(oid)
+      order = self._trading_api.get_order_by_id(oid)
 
     return _marshal_order(order)
 
   def _fetch_orders(self, limit=None, status='all', start_date=None, end_date=None):
-    after = start_date.isoformat() if start_date is not None else None
-    until = end_date.isoformat() if end_date is not None else None
+    orders_request = alpaca.trading.requests.GetOrdersRequest(
+      limit=limit or _FETCH_ORDERS_MAX,
+      status=status,
+      after=start_date,
+      until=end_date)
+
     with self._api_throttle.trigger():
-      orders = self._api.list_orders(limit=limit or _FETCH_ORDERS_MAX,
-                                     status=status,
-                                     after=after,
-                                     until=until)
+      orders = self._trading_api.get_orders(filter=orders_request)
 
     return [_marshal_order(o) for o in orders]
 
@@ -344,11 +364,11 @@ class API(api_base.TradeAPI):
 
   def cancel_order(self, oid):
     with self._api_throttle.trigger():
-      self._api.cancel_order(oid)
+      self._trading_api.cancel_order_by_id(oid)
 
   def list_positions(self):
     with self._api_throttle.trigger():
-      positions = self._api.list_positions()
+      positions = self._trading_api.get_all_positions()
 
     return [_marshal_position(p) for p in positions]
 
@@ -383,10 +403,9 @@ class API(api_base.TradeAPI):
             start=start,
             end=end,
             limit=limit,
-            feed=self._data_feed,
-          )
+            feed=self._data_feed)
 
-          bars_response = self._api.get_stock_bars(request_params)
+          bars_response = self._data_api.get_stock_bars(request_params)
 
         bsdf = bars_response.df
         if not bsdf.empty:
