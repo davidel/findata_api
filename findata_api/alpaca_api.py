@@ -1,6 +1,7 @@
 import asyncio
 import datetime
 import os
+import re
 import threading
 import time
 
@@ -20,8 +21,8 @@ from . import api_types
 from . import utils as ut
 
 try:
-  # Note: They have a new Python package at https://github.com/alpacahq/alpaca-py
-  import alpaca_trade_api as alpaca
+  import alpaca
+  import alpaca.data
 
   MODULE_NAME = 'ALPACA'
 
@@ -30,55 +31,63 @@ try:
                         help='The Alpaca API key')
     parser.add_argument('--alpaca_secret', type=str,
                         help='The Alpaca API secret')
-    parser.add_argument('--alpaca_url', type=str,
-                        help='The Alpaca API base URL')
 
   def create_api(args):
     return API(api_key=args.alpaca_key, api_secret=args.alpaca_secret,
-               api_url=args.alpaca_url, api_rate=args.api_rate)
+               api_rate=args.api_rate)
 
 except ImportError:
   MODULE_NAME = None
 
 
-_DATA_STEPS = {
-  'min': 'Min',
-  'minute': 'Min',
-  'd': 'D',
-  'day': 'D',
-}
 _FETCH_ORDERS_MAX = 500
 
 
-def _get_config(key, secret, url):
+def _parse_timeframe(data_step):
+  m = re.match(r'(\d+)?([a-zA-Z]+)', data_step)
+  if not m:
+    raise ValueError(f'Invalid data_step format: {data_step}')
+
+  amount = int(m.group(1)) if m.group(1) else 1
+  unit_str = m.group(2).lower()
+
+  if unit_str in ['min', 't', 'minute']:
+    unit = alpaca.data.timeframe.TimeFrameUnit.Minute
+  elif unit_str in ['hour', 'h']:
+    unit = alpaca.data.timeframe.TimeFrameUnit.Hour
+  elif unit_str in ['d', 'day']:
+    unit = alpaca.data.timeframe.TimeFrameUnit.Day
+  elif unit_str in ['w', 'week']:
+    unit = alpaca.data.timeframe.TimeFrameUnit.Week
+  elif unit_str in ['m', 'month']:
+    unit = alpaca.data.timeframe.TimeFrameUnit.Month
+  else:
+    alog.xraise(ValueError, f'Unsupported timeframe unit: {unit_str}')
+
+  return alpaca.data.timeframe.TimeFrame(amount, unit)
+
+
+def _get_config(key, secret):
   if key is None:
     key = pyu.getenv('APCA_API_KEY_ID')
   if secret is None:
     secret = pyu.getenv('APCA_API_SECRET_KEY')
-  if url is None:
-    url = pyu.getenv('APCA_API_BASE_URL')
-    if not url:
-      url = 'https://paper-api.alpaca.markets'
 
-  alog.debug0(f'Alpaca API created with: key={key} secret={secret} url={url}')
+  alog.debug0(f'Alpaca API created with: key={key} secret={secret}')
 
-  return key, secret, url
+  return key, secret
 
 
-def _get_df_from_bars(bars, dtype=None):
-  df_rows = []
-  for bar in bars:
-    row = dict(bar.__dict__.get('_raw'))
-    # Rename 'S' to Tradzy standard 'symbol'.
-    row['symbol'] = row['S']
-    row.pop('S')
+def _normalize_bars(df, dtype=None):
+  df.reset_index(inplace=True)
+  df.rename(columns={'open': 'o',
+                     'close': 'c',
+                     'low': 'l',
+                     'high': 'h',
+                     'volume': 'v',
+                     'timestamp': 't'}, inplace=True)
+  df['t'] = ut.convert_to_epoch(df['t'], dtype=np.int64)
 
-    # Convert time string to EPOCH timestamp.
-    row['t'] = pyd.parse_date(row['t']).timestamp()
-
-    df_rows.append(row)
-
-  df = pd.DataFrame(df_rows)
   if dtype is not None:
     for c in pyp.get_df_columns(df, discards={'t', 'symbol'}):
       df[c] = df[c].astype(dtype)
@@ -220,12 +229,15 @@ class Stream:
 
 class API(api_base.TradeAPI):
 
-  def __init__(self, api_key=None, api_secret=None, api_url=None, api_rate=None,
+  def __init__(self, api_key=None, api_secret=None, api_rate=None,
                symbols_per_step=20, data_stream_url='https://stream.data.alpaca.markets',
                data_feed='sip'):
     super().__init__(name='Alpaca', supports_streaming=True)
-    self._api_key, self._api_secret, self._api_url = _get_config(api_key, api_secret, api_url)
-    self._api = alpaca.REST(self._api_key, self._api_secret, self._api_url)
+    self._api_key, self._api_secret = _get_config(api_key, api_secret)
+    self._api = alpaca.data.historical.stock.StockHistoricalDataClient(
+      api_key=self._api_key,
+      secret_key=self._api_secret,
+    )
     self._api_throttle = throttle.Throttle(
       (200 if api_rate is None else api_rate) / 60.0)
     self._symbols_per_step = symbols_per_step
@@ -357,22 +369,28 @@ class API(api_base.TradeAPI):
   def fetch_data(self, symbols, start_date, end_date, data_step='5Min', dtype=None):
     tsteps, limit = self._break_date_range(start_date, end_date, data_step)
 
-    dfs = []
-    for tstart, tend in tsteps:
-      start = tstart.isoformat()
-      end = tend.isoformat()
+    timeframe = _parse_timeframe(data_step)
 
+    dfs = []
+    for start, end in tsteps:
       alog.debug0(f'Fetch: start={start}\tend={end}')
       for srange in range(0, len(symbols), self._symbols_per_step):
         step_symbols = symbols[srange: srange + self._symbols_per_step]
         with self._api_throttle.trigger():
-          bars = self._api.get_bars(step_symbols, ut.map_data_step(data_step, _DATA_STEPS),
-                                    limit=limit,
-                                    start=start,
-                                    end=end)
-        bsdf = _get_df_from_bars(bars, dtype=dtype)
+          request_params = alpaca.data.requests.StockBarsRequest(
+            symbol_or_symbols=step_symbols,
+            timeframe=timeframe,
+            start=start,
+            end=end,
+            limit=limit,
+            feed=self._data_feed,
+          )
+
+          bars_response = self._api.get_stock_bars(request_params)
+
+        bsdf = bars_response.df
         if not bsdf.empty:
-          dfs.append(bsdf)
+          dfs.append(_normalize_bars(bsdf, dtype=dtype))
 
     df = pd.concat(dfs, ignore_index=True) if dfs else None
     if df is not None:
