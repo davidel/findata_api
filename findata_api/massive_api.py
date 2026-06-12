@@ -46,7 +46,6 @@ _DATA_STEPS = {
   'd': 'day',
   'w': 'week',
 }
-_BAR_COLUMNS = set(os.getenv('MASSIVE_BAR_COLUMNS', 't,o,c,h,l,n,v,a').split(','))
 _BAR_RENAMES = {
   'timestamp': 't',
   'open': 'o',
@@ -86,7 +85,8 @@ def _get_df_from_response(symbol, resp, dtype=None):
     df = pd.DataFrame(resp)
     df.rename(columns=_BAR_RENAMES, inplace=True)
 
-    drop_cols = [c for c in df.columns if c not in _BAR_COLUMNS]
+    valid_columns = set(_BAR_RENAMES.values())
+    drop_cols = [c for c in df.columns if c not in valid_columns]
     if drop_cols:
       df.drop(drop_cols, axis=1, inplace=True)
 
