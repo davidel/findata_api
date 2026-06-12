@@ -23,19 +23,30 @@ from . import utils as ut
 try:
   import alpaca
   import alpaca.data
+  import alpaca.data.live
   import alpaca.trading
 
   MODULE_NAME = 'ALPACA'
 
   def add_api_options(parser):
+    import argparse
+
     parser.add_argument('--alpaca_key', type=str,
                         help='The Alpaca API key')
     parser.add_argument('--alpaca_secret', type=str,
                         help='The Alpaca API secret')
+    parser.add_argument('--alpaca_feed', type=str, default='sip',
+                        help='The Alpaca feed')
+    parser.add_argument('--alpaca_paper', action=argparse.BooleanOptionalAction,
+                        default=True,
+                        help='The Alpaca paper API mode')
 
   def create_api(args):
-    return API(api_key=args.alpaca_key, api_secret=args.alpaca_secret,
-               api_rate=args.api_rate)
+    return API(api_key=args.alpaca_key,
+               api_secret=args.alpaca_secret,
+               data_feed=args.alpaca_feed,
+               api_rate=args.api_rate,
+               paper=args.alpaca_paper)
 
 except ImportError:
   MODULE_NAME = None
@@ -68,15 +79,17 @@ def _parse_timeframe(data_step):
   return alpaca.data.timeframe.TimeFrame(amount, unit)
 
 
-def _get_config(key, secret):
+def _get_config(key, secret, paper):
   if key is None:
     key = pyu.getenv('APCA_API_KEY_ID')
   if secret is None:
     secret = pyu.getenv('APCA_API_SECRET_KEY')
+  if paper is None:
+    paper = pyu.getenv('APCA_PAPER_TRADING', dtype=bool, defval=True)
 
-  alog.debug0(f'Alpaca API created with: key={key} secret={secret}')
+  alog.debug0(f'Alpaca API created with: key={key} secret={secret} paper={paper}')
 
-  return key, secret
+  return key, secret, paper
 
 
 def _normalize_bars(df, dtype=None):
@@ -159,14 +172,13 @@ def _marshal_stream_bar(b):
 class Stream:
 
   def __init__(self, api_key, api_secret,
-               data_stream_url='https://stream.data.alpaca.markets',
-               data_feed='sip'):
-    self._conn = alpaca.stream.Stream(
+               data_feed='sip',
+               paper=True):
+    self._conn = alpaca.data.live.stock.StockDataStream(
       api_key,
       api_secret,
-      data_stream_url=data_stream_url,
       raw_data=True,
-      data_feed=data_feed)
+      feed=getattr(alpaca.data.enums.DataFeed, data_feed.upper()))
 
     self._stream_thread = None
     self._handlers = dict()
@@ -235,22 +247,20 @@ class API(api_base.TradeAPI):
                api_secret=None,
                api_rate=None,
                symbols_per_step=20,
-               data_stream_url='https://stream.data.alpaca.markets',
                data_feed='sip',
-               paper=True):
+               paper=None):
     super().__init__(name='Alpaca', supports_streaming=True)
-    self._api_key, self._api_secret = _get_config(api_key, api_secret)
+    self._api_key, self._api_secret, self._paper = _get_config(api_key, api_secret, paper)
     self._data_api = alpaca.data.historical.stock.StockHistoricalDataClient(
       api_key=self._api_key,
       secret_key=self._api_secret)
     self._trading_api = alpaca.trading.client.TradingClient(
       api_key=self._api_key,
       secret_key=self._api_secret,
-      paper=paper)
+      paper=self._paper)
     self._api_throttle = throttle.Throttle(
       (200 if api_rate is None else api_rate) / 60.0)
     self._symbols_per_step = symbols_per_step
-    self._data_stream_url = data_stream_url
     self._data_feed = data_feed
     self._stream = None
 
@@ -263,8 +273,8 @@ class API(api_base.TradeAPI):
       alog.debug1(f'Registering Streaming: handlers={tuple(handlers.keys())}\tsymbols={symbols}')
 
       stream = Stream(self._api_key, self._api_secret,
-                      data_stream_url=self._data_stream_url,
-                      data_feed=self._data_feed)
+                      data_feed=self._data_feed,
+                      paper=self._paper)
       pyfw.fin_wrap(self, '_stream', stream, finfn=stream.stop)
       self._stream.register(symbols, handlers)
 
@@ -305,7 +315,6 @@ class API(api_base.TradeAPI):
 
     with self._api_throttle.trigger():
       order = self._trading_api.submit_order(order_data=order_request)
-
 
     return _marshal_order(order)
 
