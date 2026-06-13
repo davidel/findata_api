@@ -99,6 +99,7 @@ def _normalize_bars(df, dtype=None):
                      'low': 'l',
                      'high': 'h',
                      'volume': 'v',
+                     'vwap': 'a',
                      'timestamp': 't'}, inplace=True)
   df['t'] = ut.convert_to_epoch(df['t'], dtype=np.int64)
 
