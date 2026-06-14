@@ -386,7 +386,7 @@ class API(api_base.TradeAPI):
 
   def _break_date_range(self, start_date, end_date, data_step):
     # At Alpaca level API we need to use an hard limit, and break time range.
-    limit = pyu.getenv('APCA_LIMIT', dtype=int, defval=5000)
+    limit = pyu.getenv('APCA_LIMIT', dtype=int, defval=10000)
 
     dstep = ut.get_data_step_delta(data_step)
     if dstep >= datetime.timedelta(days=1):
