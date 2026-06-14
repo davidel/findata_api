@@ -17,7 +17,7 @@ def _detect_apis():
   parent, _ = pymu.split_module_name(__name__)
 
   apis = pydm.DynLoader(modname=parent, postfix='_api')
-  module_names = apis.module_names()
+  module_names = [name for name apis.module_names() if name is not None]
 
   order = {name: len(module_names) - i for i, name in enumerate(os.getenv(
     'FINDATA_API_ORDER',
