@@ -17,6 +17,7 @@ def _detect_apis():
   parent, _ = pymu.split_module_name(__name__)
 
   apis = pydm.DynLoader(modname=parent, postfix='_api')
+
   module_names = [name for name in apis.module_names() if name is not None]
 
   order = {name: len(module_names) - i for i, name in enumerate(os.getenv(
@@ -27,7 +28,7 @@ def _detect_apis():
                            key=lambda x: order.get(x, -1),
                            reverse=True)
 
-  return apis, tuple(ordered_modules)
+  return {name: apis[name] for name in ordered_modules}, tuple(ordered_modules)
 
 
 _APIS, _API_NAMES = _detect_apis()
