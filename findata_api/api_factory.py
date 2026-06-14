@@ -47,7 +47,7 @@ def add_api_options(parser):
                       default=pyu.getenv('API_RATE', dtype=float),
                       help='The maximum number of API calls per minute')
 
-  for mod in _APIS.modules():
+  for mod in _APIS.values():
     mod.add_api_options(parser)
 
 
