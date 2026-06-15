@@ -18,8 +18,7 @@ import py_misc_utils.utils as pyu
 from . import market_hours as mh
 
 
-def day_split_exec(df, epoch_col, exec_fn, exec_args=None, open_delta=0,
-                   close_delta=0, max_gap=None):
+def day_split_exec(df, epoch_col, exec_fn, open_delta=0, close_delta=0, max_gap=None):
   mkf = mh.MarketTimeTracker(open_delta=open_delta, close_delta=close_delta)
 
   splits = collections.defaultdict(lambda: array.array('L'))
@@ -37,7 +36,7 @@ def day_split_exec(df, epoch_col, exec_fn, exec_args=None, open_delta=0,
     if mdf.index.name is None:
       mdf = mdf.reset_index(drop=True)
 
-    result.append(exec_fn(mdf, **exec_args))
+    result.append(exec_fn(mdf))
 
   for t, indices in splits.items():
     alog.debug0(f'Split has {len(indices)} rows at {pyd.from_timestamp(t).isoformat()}')
