@@ -165,10 +165,11 @@ def time_filter_dataframe(df, start_date=None, end_date=None, col=None):
 def dataframe_column_time_shift(df, name, delta):
   seconds = get_data_step_delta(delta).total_seconds()
 
+  secs_dec, secs_int = math.modf(seconds)
+  dt = np.timedelta64(int(1e6 * secs_dec), 'us') + np.timedelta64(int(secs_int), 's')
+
   def adjust(t):
     if isinstance(t, np.datetime64):
-      dec_part, int_part = math.modf(seconds)
-      dt = np.timedelta64(int(1e6 * dec_part), 'us') + np.timedelta64(int(int_part), 's')
       return t + dt
 
     return t + int(seconds) if np.issubdtype(t.dtype, np.integer) else t + seconds
