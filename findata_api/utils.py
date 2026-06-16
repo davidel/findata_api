@@ -65,13 +65,15 @@ def split_field(f):
 
 
 def split_columns(cols):
-  symbols = collections.defaultdict(list)
+  symbols, anon = collections.defaultdict(list), []
   for c in cols:
     sym, field = split_field(c)
     if sym and field:
       symbols[sym].append(field)
+    else:
+      anon.append(c)
 
-  return symbols
+  return symbols, anon
 
 
 def normalize_columns(cols=None, df=None):
@@ -93,7 +95,9 @@ def normalize_columns(cols=None, df=None):
 
 
 def get_df_columns_symbols(df):
-  return sorted(split_columns(df.columns).keys())
+  symbols, _ = split_columns(df.columns)
+
+  return sorted(symbols.keys())
 
 
 def get_df_column_unique(df, name):
