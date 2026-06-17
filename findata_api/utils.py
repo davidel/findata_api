@@ -64,16 +64,16 @@ def split_field(f):
   return (f[: pos], f[pos + 1:]) if pos >= 0 else (None, f)
 
 
-IndexColumn = collections.namedtuple('IndexColumn', 'index, name')
+IndexColumn = collections.namedtuple('IndexColumn', 'index, name, field')
 
 def split_columns(cols):
   symbols, anon = collections.defaultdict(list), []
   for i, c in enumerate(cols):
     sym, field = split_field(c)
     if sym and field:
-      symbols[sym].append(IndexColumn(i, field))
+      symbols[sym].append(IndexColumn(i, c, field))
     else:
-      anon.append(IndexColumn(i, c))
+      anon.append(IndexColumn(i, c, c))
 
   return symbols, anon
 
